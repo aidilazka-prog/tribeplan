@@ -70,6 +70,20 @@ export async function fetchTrip(tripId) {
   return assert(data, error, 'fetchTrip')
 }
 
+/**
+ * Update the current announcement of a trip.
+ */
+export async function updateTripAnnouncement(tripId, announcement) {
+  const { data, error } = await supabase
+    .from('trips')
+    .update({ current_announcement: announcement })
+    .eq('id', tripId)
+    .select()
+    .single()
+
+  return assert(data, error, 'updateTripAnnouncement')
+}
+
 // ─────────────────────────────────────────────────────────────
 // MEMBERS
 // ─────────────────────────────────────────────────────────────

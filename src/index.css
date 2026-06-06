@@ -125,3 +125,15 @@ body {
   filter: invert(1) brightness(0.9) contrast(1.2);
   margin-right: 8px;
 }
+
+/* Helper colors */
+.text-emerald-400 {
+  color: #34d399 !important;
+}
+.text-amber-400 {
+  color: #fbbf24 !important;
+}
+.text-slate-200 {
+  color: #e2e8f0 !important;
+}
+

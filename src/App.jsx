@@ -9,6 +9,7 @@ import IdeaBucketTab  from './components/IdeaBucketTab/IdeaBucketTab'
 import ExpensesTab    from './components/ExpensesTab/ExpensesTab'
 import PackingTab     from './components/PackingTab/PackingTab'
 import OnboardingTour from './components/OnboardingTour/OnboardingTour'
+import { supabase } from './lib/supabase'
 import './App.css'
 
 const TABS = {
@@ -139,6 +140,11 @@ export default function App() {
 
   // ── Tab ───────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState(TABS.TIMELINE)
+
+  // ── Announcement ──────────────────────────────────────────
+  const [announcement, setAnnouncement] = useState(null)
+  const [announcementInput, setAnnouncementInput] = useState('')
+  const [showAnnouncementForm, setShowAnnouncementForm] = useState(false)
 
   // ── Remote data ───────────────────────────────────────────
   const [timelineItems, setTimelineItems] = useState([])
@@ -365,6 +371,72 @@ export default function App() {
       handleStartTour()
     }
   }, [currentUser])
+
+  // ── Announcement hooks & handlers ─────────────────────────
+  useEffect(() => {
+    if (!tripConfig?.id) return
+
+    // Fetch initial announcement
+    db.fetchTrip(tripConfig.id)
+      .then(tripRow => {
+        setAnnouncement(tripRow.current_announcement || null)
+        setAnnouncementInput(tripRow.current_announcement || '')
+      })
+      .catch(err => console.error('Error fetching initial announcement:', err))
+
+    // Real-time listener
+    const channel = supabase
+      .channel(`public:trips:${tripConfig.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'trips',
+          filter: `id=eq.${tripConfig.id}`,
+        },
+        (payload) => {
+          const { new: newRow } = payload
+          if (newRow && newRow.id === tripConfig.id) {
+            setAnnouncement(newRow.current_announcement || null)
+            setAnnouncementInput(newRow.current_announcement || '')
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [tripConfig?.id])
+
+  const handleBroadcast = async (e) => {
+    e.preventDefault()
+    if (!tripConfig?.id) return
+    const text = announcementInput.trim()
+    if (!text) return
+
+    try {
+      await db.updateTripAnnouncement(tripConfig.id, text)
+      setAnnouncement(text)
+    } catch (err) {
+      console.error(err)
+      setDbError('Failed to broadcast announcement.')
+    }
+  }
+
+  const handleClearBroadcast = async () => {
+    if (!tripConfig?.id) return
+
+    try {
+      await db.updateTripAnnouncement(tripConfig.id, null)
+      setAnnouncement(null)
+      setAnnouncementInput('')
+    } catch (err) {
+      console.error(err)
+      setDbError('Failed to clear announcement.')
+    }
+  }
 
   // ── Full-screen loader while resolving a /join/:id deep link
   if (urlLoading) {
@@ -689,6 +761,16 @@ export default function App() {
     <div className="app-shell">
       {ErrorBanner}
 
+      {/* Floating Live Banner UI (For Everyone) */}
+      {announcement && (
+        <div className="live-announcement-banner" role="alert">
+          <span className="announcement-ping-indicator" />
+          <span className="announcement-text">
+            📢 <strong>ANNOUNCEMENT FROM LEADER:</strong> {announcement}
+          </span>
+        </div>
+      )}
+
       <TripHeader
         trip={tripConfig}
         currentUser={currentUser}
@@ -697,7 +779,35 @@ export default function App() {
         onLeave={handleLeave}
         onManage={isLeader ? handleManageTrip : undefined}
         onStartTour={handleStartTour}
+        onToggleAnnouncementForm={() => setShowAnnouncementForm(prev => !prev)}
       />
+
+      {/* Leader Announcement Panel */}
+      {isLeader && showAnnouncementForm && (
+        <form onSubmit={handleBroadcast} className="announcement-form">
+          <input
+            type="text"
+            className="announcement-input"
+            placeholder="Type group announcement (e.g., Meeting at the lobby in 15 minutes instead!)"
+            value={announcementInput}
+            onChange={(e) => setAnnouncementInput(e.target.value)}
+            maxLength={150}
+            required
+          />
+          <div className="announcement-form-buttons">
+            <button type="submit" className="btn btn--broadcast">Broadcast</button>
+            {announcement && (
+              <button
+                type="button"
+                className="btn btn--clear-broadcast"
+                onClick={handleClearBroadcast}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </form>
+      )}
 
       <main className="tab-content" role="main">
         {activeTab === TABS.TIMELINE && (

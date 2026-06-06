@@ -160,7 +160,7 @@ function IdeaCard({ idea, onUpvote, currentUser, onMoveClick }) {
         <h2 className="idea-card__title">{idea.title}</h2>
         <p className="idea-card__desc">{idea.description}</p>
         <div className="idea-card__footer">
-          <span className="idea-card__author">✍️ {idea.addedBy}</span>
+          <span className="idea-card__author text-emerald-400">✍️ {idea.addedBy}</span>
           <button
             id={`move-${idea.id}`}
             className="move-btn"

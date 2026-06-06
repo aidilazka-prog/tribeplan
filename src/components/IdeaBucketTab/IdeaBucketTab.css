@@ -241,8 +241,8 @@
 
 .idea-card__author {
   font-size: 10px;
-  color: var(--color-idea);
-  font-weight: 500;
+  color: var(--color-primary);
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

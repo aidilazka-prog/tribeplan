@@ -1,10 +1,11 @@
 import './TripHeader.css'
 
-export default function TripHeader({ trip, currentUser, isLeader, activeTab, onLeave, onManage, onStartTour }) {
+export default function TripHeader({ trip, currentUser, isLeader, activeTab, onLeave, onManage, onStartTour, onToggleAnnouncementForm }) {
   const tabTitles = {
     timeline: '📅 Timeline',
     ideas:    '💡 Idea Bucket',
     expenses: '💰 Expenses',
+    packing:  '📦 Packing List',
   }
 
   const dateRange = trip.startDate && trip.endDate
@@ -23,6 +24,20 @@ export default function TripHeader({ trip, currentUser, isLeader, activeTab, onL
         </div>
 
         <div className="trip-header__actions">
+          {/* Megaphone / Announcement — leader only */}
+          {isLeader && onToggleAnnouncementForm && (
+            <button
+              id="broadcast-toggle-btn"
+              className="trip-header__action-btn"
+              onClick={onToggleAnnouncementForm}
+              aria-label="Create group announcement"
+              title="Broadcast Announcement"
+              style={{ fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              📢
+            </button>
+          )}
+
           {/* Manage Trip — leader only */}
           {isLeader && onManage && (
             <button
