@@ -33,7 +33,7 @@ export default function AiPlannerModal({ isOpen, onClose, onSubmit, tripName, nu
     try {
       const genAI = new GoogleGenerativeAI(apiKey)
       const model = genAI.getGenerativeModel({
-        model: 'gemini-1.5-flash-latest',
+        model: 'gemini-1.5-flash',
         generationConfig: {
           responseMimeType: 'application/json',
           responseSchema: {
@@ -59,7 +59,7 @@ Generate realistic time slots, realistic restaurant/attraction names, and helpfu
 The trip destination or name is: ${tripName}.
 The total duration is ${numDays} days.
 Make sure the dayNumber for every event is an integer strictly between 1 and ${numDays} inclusive. Do not generate events for days outside this range.`
-      }, { apiVersion: 'v1' })
+      }, { apiVersion: 'v1beta' })
 
       const fullPrompt = `Please plan an itinerary for a trip named "${tripName}".
 The user request or preference is: "${prompt}".
