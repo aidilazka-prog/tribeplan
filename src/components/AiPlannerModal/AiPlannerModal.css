@@ -1,0 +1,74 @@
+/* AiPlannerModal.css */
+
+.ai-planner-modal {
+  max-width: 440px;
+}
+
+.modal-help-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-md);
+}
+
+.modal-help-text strong {
+  color: var(--color-text);
+}
+
+.modal-error-banner {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  line-height: 1.4;
+  margin-top: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.btn--ai-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+}
+
+.btn--ai-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b55fe6, #8b5cf6);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(139, 92, 246, 0.35);
+}
+
+.btn--ai-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Spinner definition */
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: modal-spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes modal-spin {
+  to { transform: rotate(360deg); }
+}

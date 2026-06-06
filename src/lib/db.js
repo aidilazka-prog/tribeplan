@@ -155,6 +155,19 @@ export async function addTimelineEvent(tripId, { day, time, title, note, googleM
 }
 
 /**
+ * Bulk-insert multiple events to the timeline.
+ * Returns the inserted rows.
+ */
+export async function addTimelineEventsBulk(events) {
+  const { data, error } = await supabase
+    .from('timeline_events')
+    .insert(events)
+    .select()
+
+  return assert(data, error, 'addTimelineEventsBulk')
+}
+
+/**
  * Delete a timeline event by its UUID.
  */
 export async function deleteTimelineEvent(eventId) {

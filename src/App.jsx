@@ -454,6 +454,49 @@ export default function App() {
     }
   }
 
+  const handleAddEventsBulk = async (eventsList) => {
+    setLoading(true)
+    setDbError(null)
+    try {
+      const inserts = eventsList.map(e => {
+        const notesJson = JSON.stringify({
+          location: e.locationName || '',
+          note: e.note || '',
+          category: e.category || 'activity'
+        })
+        const query = e.physicalAddress 
+          ? `${e.locationName} - ${e.physicalAddress}`
+          : e.locationName
+        const googleMapsUrl = e.locationName
+          ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+          : ''
+        return {
+          trip_id: tripConfig.id,
+          day_number: Math.min(selectableDays.length, Math.max(1, Math.floor(Number(e.dayNumber) || 1))),
+          time_slot: e.timeSlot || '09:00',
+          title: e.title || 'Untitled Activity',
+          notes: notesJson,
+          google_maps_url: googleMapsUrl || null,
+        }
+      })
+      const rows = await db.addTimelineEventsBulk(inserts)
+      const enriched = rows.map(row => ({
+        ...toTimelineItem(row),
+        date: DAY_DATES[row.day_number] || DAY_DATES[1],
+      }))
+      setTimelineItems(prev =>
+        [...prev, ...enriched].sort((a, b) =>
+          a.day !== b.day ? a.day - b.day : a.time.localeCompare(b.time)
+        )
+      )
+    } catch (err) {
+      console.error(err)
+      setDbError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleEditEvent = async (updatedEvent) => {
     // Optimistic state update
     setTimelineItems(prev =>
@@ -659,9 +702,11 @@ export default function App() {
           <TimelineTab
             items={enrichedTimelineItems}
             onAddEvent={handleAddEvent}
+            onAddEventsBulk={handleAddEventsBulk}
             onEditEvent={handleEditEvent}
             onToggleDone={handleToggleDone}
             selectableDays={selectableDays}
+            tripName={tripConfig?.tripName || 'Our Trip'}
           />
         )}
         {activeTab === TABS.IDEAS && (

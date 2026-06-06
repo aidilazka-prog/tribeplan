@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import AddEventModal from '../AddEventModal/AddEventModal'
+import AiPlannerModal from '../AiPlannerModal/AiPlannerModal'
 import './TimelineTab.css'
 
 const CATEGORY_ICONS = {
@@ -22,8 +23,9 @@ const CATEGORY_COLORS = {
 
 import { useEffect } from 'react'
 
-export default function TimelineTab({ items, onAddEvent, onEditEvent, onToggleDone, selectableDays = [] }) {
+export default function TimelineTab({ items, onAddEvent, onAddEventsBulk, onEditEvent, onToggleDone, selectableDays = [], tripName }) {
   const [modalOpen, setModalOpen] = useState(false)
+  const [aiModalOpen, setAiModalOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
   const [now, setNow] = useState(new Date())
 
@@ -112,21 +114,32 @@ export default function TimelineTab({ items, onAddEvent, onEditEvent, onToggleDo
           })}
       </section>
 
-      {/* ── FAB: rendered outside the scroll section, fixed to viewport ── */}
-      <button
-        id="add-event-btn"
-        className="add-event-fab"
-        onClick={() => setModalOpen(true)}
-        aria-label="Add new event to timeline"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth="2.8" strokeLinecap="round"
-          strokeLinejoin="round" aria-hidden="true">
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-        Add Event
-      </button>
+      {/* ── FAB Group: rendered outside the scroll section, fixed to viewport ── */}
+      <div className="fab-group">
+        <button
+          id="add-event-btn"
+          className="add-event-fab"
+          onClick={() => setModalOpen(true)}
+          aria-label="Add new event to timeline"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2.8" strokeLinecap="round"
+            strokeLinejoin="round" aria-hidden="true">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          Add Event
+        </button>
+
+        <button
+          id="ai-planner-btn"
+          className="ai-planner-fab"
+          onClick={() => setAiModalOpen(true)}
+          aria-label="Generate itinerary using AI"
+        >
+          <span>✨ AI Planner</span>
+        </button>
+      </div>
 
       {/* ── Modal ── */}
       <AddEventModal
@@ -136,6 +149,15 @@ export default function TimelineTab({ items, onAddEvent, onEditEvent, onToggleDo
         selectableDays={selectableDays}
         initialValues={editingEvent}
         existingEvents={items}
+      />
+
+      {/* ── AI Planner Modal ── */}
+      <AiPlannerModal
+        isOpen={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        onSubmit={onAddEventsBulk}
+        tripName={tripName}
+        numDays={selectableDays.length}
       />
     </>
   )
