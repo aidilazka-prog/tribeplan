@@ -72,3 +72,7 @@
 @keyframes modal-spin {
   to { transform: rotate(360deg); }
 }
+
+.ai-planner-modal .modal-form {
+  padding-bottom: 35dvh; /* generous bottom padding to allow scrolling inputs above keyboard */
+}

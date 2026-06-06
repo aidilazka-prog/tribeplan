@@ -87,7 +87,7 @@ Generate a list of recommended events for this ${numDays}-day trip.`
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-container ai-planner-modal" role="dialog" aria-modal="true">
+      <div className="modal-panel ai-planner-modal" role="dialog" aria-modal="true">
         <div className="modal-header">
           <h2 className="modal-title">✨ AI Itinerary Planner</h2>
           <button
@@ -106,7 +106,7 @@ Generate a list of recommended events for this ${numDays}-day trip.`
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="modal-body">
+        <form onSubmit={handleSubmit} className="modal-form">
           <p className="modal-help-text">
             Let Gemini plan your {numDays}-day trip to <strong>{tripName}</strong>! 
             Describe your preferred travel style (e.g., "Relaxed sightseeing", "Culinary exploration", "Thrill-seeking activities").

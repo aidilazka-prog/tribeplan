@@ -28,12 +28,55 @@ export default function TimelineTab({ items, onAddEvent, onAddEventsBulk, onEdit
   const [aiModalOpen, setAiModalOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
   const [now, setNow] = useState(new Date())
+  const [selectedDay, setSelectedDay] = useState(1)
 
   // Keep now updated every minute
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000)
     return () => clearInterval(timer)
   }, [])
+
+  const handleWhatsAppShare = () => {
+    const dayItem = selectableDays.find(d => d.day === selectedDay)
+    const dateStr = dayItem ? formatDate(dayItem.date) : ''
+    
+    // Get events for this day
+    const dayEvents = items.filter(item => item.day === selectedDay)
+    
+    // Build the string
+    let text = `🌴 *${(tripName || 'OUR TRIP').toUpperCase()} ITINERARY - DAY ${selectedDay}* 🌴\n`
+    if (dateStr) {
+      text += `📅 ${dateStr}\n`
+    }
+    text += `\n`
+    
+    if (dayEvents.length === 0) {
+      text += `No activities planned for this day yet.\n`
+    } else {
+      // Sort dayEvents by time slot
+      const sortedEvents = [...dayEvents].sort((a, b) => a.time.localeCompare(b.time))
+      
+      sortedEvents.forEach(item => {
+        // category icon
+        const icon = CATEGORY_ICONS[item.category] || '📍'
+        text += `• *${item.time}* - ${item.title} ${icon}\n`
+        
+        if (item.location) {
+          text += `📍 Location: ${item.location}\n`
+        }
+        if (item.note) {
+          text += `📝 Note: ${item.note}\n`
+        }
+        text += `\n`
+      })
+    }
+    
+    text += `_Shared via TribePlan_`
+    
+    const encoded = encodeURIComponent(text)
+    const url = `https://api.whatsapp.com/send?text=${encoded}`
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
 
   // Map items to include parsed dateTime and isPast
   const enrichedItems = items.map(item => {
@@ -79,39 +122,79 @@ export default function TimelineTab({ items, onAddEvent, onAddEventsBulk, onEdit
     <>
       {/* ── Scrollable timeline content ── */}
       <section className="timeline-tab" aria-label="Trip timeline">
-        {Object.keys(days)
-          .sort((a, b) => Number(a) - Number(b))
-          .map(day => {
-            const dayItems = days[day]
-            return (
-              <div key={day} className="timeline-day">
-                <div className="timeline-day__header">
-                  <span className="timeline-day__badge">Day {day}</span>
-                  <span className="timeline-day__date">
-                    - {formatDate(dayItems[0].date)}
-                  </span>
-                  <span className="timeline-day__count">
-                    {dayItems.length} event{dayItems.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
+        {/* Top Header Actions (Day Selector & WhatsApp Share) */}
+        <div className="timeline-header-actions">
+          <div className="day-selector-scroll">
+            {selectableDays.map(d => (
+              <button
+                key={d.day}
+                type="button"
+                className={`day-chip${selectedDay === d.day ? ' day-chip--active' : ''}`}
+                onClick={() => setSelectedDay(d.day)}
+              >
+                <span className="day-chip__num">Day {d.day}</span>
+                <span className="day-chip__date">{d.sub}</span>
+              </button>
+            ))}
+          </div>
 
-                <div className="timeline-day__items">
-                  {dayItems.map((item, idx) => (
+          <button
+            type="button"
+            className="whatsapp-share-btn"
+            onClick={handleWhatsAppShare}
+            aria-label={`Share Day ${selectedDay} to WhatsApp`}
+          >
+            <svg className="whatsapp-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.785 1.059 3.548 1.621 5.361 1.622 5.405 0 9.805-4.379 9.808-9.76.002-2.607-1.015-5.059-2.864-6.91C17.054 2.253 14.6 1.238 12.002 1.238c-5.41 0-9.809 4.38-9.813 9.76-.002 2.056.544 4.062 1.584 5.86l-.997 3.646 3.871-.978zM17.47 15.39c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+            </svg>
+            Share Day {selectedDay}
+          </button>
+        </div>
+
+        {(() => {
+          const dayItem = selectableDays.find(d => d.day === selectedDay)
+          const dateStr = dayItem ? formatDate(dayItem.date) : ''
+          const dayEvents = enrichedItems
+            .filter(item => item.day === selectedDay)
+            .sort((a, b) => a.time.localeCompare(b.time))
+
+          return (
+            <div className="timeline-day">
+              <div className="timeline-day__header">
+                <span className="timeline-day__badge">Day {selectedDay}</span>
+                <span className="timeline-day__date">
+                  {dateStr && `- ${dateStr}`}
+                </span>
+                <span className="timeline-day__count">
+                  {dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              <div className="timeline-day__items">
+                {dayEvents.length === 0 ? (
+                  <div className="timeline-day__empty-state">
+                    <div className="timeline-day__empty-icon">🥾</div>
+                    <h3 className="timeline-day__empty-title">No events for Day {selectedDay}</h3>
+                    <p className="timeline-day__empty-desc">Click "Add Event" or use "✨ AI Planner" below to start scheduling!</p>
+                  </div>
+                ) : (
+                  dayEvents.map((item, idx) => (
                     <TimelineCard
                       key={item.id}
                       item={item}
-                      isLast={idx === dayItems.length - 1}
+                      isLast={idx === dayEvents.length - 1}
                       isNew={item.id.startsWith('tl-') && /^\d{13}$/.test(item.id.slice(3))}
                       isClosestUpcoming={item.id === closestUpcomingId}
                       now={now}
                       onEditClick={handleEditClick}
                       onToggleDone={onToggleDone}
                     />
-                  ))}
-                </div>
+                  ))
+                )}
               </div>
-            )
-          })}
+            </div>
+          )
+        })()}
       </section>
 
       {/* ── FAB Group: rendered outside the scroll section, fixed to viewport ── */}
