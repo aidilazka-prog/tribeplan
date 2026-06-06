@@ -513,6 +513,7 @@ export default function ExpensesTab({ items, members, onAddExpense, onDeleteExpe
 function LedgerRow({ exp, isDeleting, onDelete }) {
   const perPerson = exp.amount / exp.splitAmong.length
   const meta = CATEGORY_META[exp.category] || CATEGORY_META.other
+  const isMock = exp.id && exp.id.toString().startsWith('tour-mock-')
 
   return (
     <li className={`ledger-row${isDeleting ? ' ledger-row--deleting' : ''}`}
@@ -532,9 +533,11 @@ function LedgerRow({ exp, isDeleting, onDelete }) {
         <span className="ledger-row__total">{formatAmount(exp.amount, exp.currency)}</span>
         <button
           className="ledger-row__delete"
-          onClick={onDelete}
-          aria-label={`Delete expense: ${exp.description}`}
-          title="Remove"
+          onClick={() => !isMock && onDelete()}
+          disabled={isMock}
+          aria-label={isMock ? "Demo Expense (Disabled)" : `Delete expense: ${exp.description}`}
+          title={isMock ? "Demo Expense (Disabled)" : "Remove"}
+          style={isMock ? { opacity: 0.3, cursor: 'not-allowed' } : {}}
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"

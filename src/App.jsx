@@ -7,6 +7,7 @@ import TripHeader     from './components/TripHeader/TripHeader'
 import TimelineTab    from './components/TimelineTab/TimelineTab'
 import IdeaBucketTab  from './components/IdeaBucketTab/IdeaBucketTab'
 import ExpensesTab    from './components/ExpensesTab/ExpensesTab'
+import OnboardingTour from './components/OnboardingTour/OnboardingTour'
 import './App.css'
 
 const TABS = {
@@ -59,6 +60,74 @@ function toIdeaItem(row) {
   }
 }
 
+// ── Mock data for the tour ────────────────────────────────────
+const MOCK_TOUR_TIMELINE_ITEMS = [
+  {
+    id: 'tour-mock-tl-1',
+    day: 1,
+    time: '14:00',
+    title: '✨ Welcome check-in at Layar Villa',
+    location: 'Layar Villa - Jl. Drupadi, Seminyak, Bali',
+    note: 'Welcome to your trip command center! Click the location link above to navigate.',
+    category: 'accommodation',
+    googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=Layar+Villa+-+Jl.+Drupadi,+Seminyak,+Bali',
+    isDone: false,
+  },
+  {
+    id: 'tour-mock-tl-2',
+    day: 1,
+    time: '19:00',
+    title: '🍽️ Welcome dinner at Bebek Kaleyo',
+    location: 'Bebek Kaleyo - Jl. Lap. Banteng Utara No.1, Jakarta',
+    note: 'Try the crispy duck. Reservation under family name.',
+    category: 'food',
+    googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=Bebek+Kaleyo+-+Jl.+Lap.+Banteng+Utara+No.1,+Jakarta',
+    isDone: false,
+  }
+]
+
+const MOCK_TOUR_IDEA_ITEMS = [
+  {
+    id: 'tour-mock-idea-1',
+    title: 'Visit Secret Tegenungan Waterfall',
+    description: 'About 1 hr drive. Don\'t forget swimwear and cameras! 📍 Location: Ubud, Bali',
+    addedBy: 'Aisyah',
+    upvotes: 4,
+    upvotedBy: ['Mum', 'Dad'],
+  },
+  {
+    id: 'tour-mock-idea-2',
+    title: 'Traditional Balinese Cooking Class',
+    description: 'Learn to make satay and Balinese sambal from scratch. 📍 Location: Ubud Organic Farm',
+    addedBy: 'Irfan',
+    upvotes: 2,
+    upvotedBy: ['Mum'],
+  }
+]
+
+const MOCK_TOUR_EXPENSE_ITEMS = [
+  {
+    id: 'tour-mock-exp-1',
+    description: 'Villa deposit payment',
+    amount: 1500,
+    currency: 'USD',
+    paidBy: 'Dad',
+    splitAmong: ['Mum', 'Dad', 'Aisyah', 'Irfan'],
+    category: 'accommodation',
+    date: '2026-06-06',
+  },
+  {
+    id: 'tour-mock-exp-2',
+    description: 'Welcome dinner ducks',
+    amount: 750000,
+    currency: 'IDR',
+    paidBy: 'Mum',
+    splitAmong: ['Mum', 'Dad', 'Aisyah', 'Irfan'],
+    category: 'food',
+    date: '2026-06-06',
+  }
+]
+
 // ─────────────────────────────────────────────────────────────
 export default function App() {
   // ── Session ───────────────────────────────────────────────
@@ -81,6 +150,10 @@ export default function App() {
   const [dbError,      setDbError]      = useState(null)
   const [urlLoading,   setUrlLoading]   = useState(false)   // fetching trip from /join/:id URL
   const [deepLinkView, setDeepLinkView] = useState(null)    // 'join' when arriving via share link
+  
+  // ── Onboarding Tour state ──────────────────────────────────
+  const [tourActive, setTourActive] = useState(false)
+  const [tourStep, setTourStep] = useState(1)
 
   // ── Load data when a trip is active ───────────────────────
   const loadTripData = useCallback(async (tripId) => {
@@ -251,6 +324,46 @@ export default function App() {
     setCurrentUser(null)
   }
 
+  // ── Tour Handlers ──────────────────────────────────────────
+  const handleTourNext = () => {
+    if (tourStep < 4) {
+      const nextStep = tourStep + 1
+      setTourStep(nextStep)
+      if (nextStep === 2) setActiveTab(TABS.TIMELINE)
+      else if (nextStep === 3) setActiveTab(TABS.IDEAS)
+      else if (nextStep === 4) setActiveTab(TABS.EXPENSES)
+    } else {
+      handleTourFinish()
+    }
+  }
+
+  const handleTourBack = () => {
+    if (tourStep > 1) {
+      const prevStep = tourStep - 1
+      setTourStep(prevStep)
+      if (prevStep === 1 || prevStep === 2) setActiveTab(TABS.TIMELINE)
+      else if (prevStep === 3) setActiveTab(TABS.IDEAS)
+    }
+  }
+
+  const handleTourFinish = () => {
+    setTourActive(false)
+    setTourStep(1)
+    localStorage.setItem('has_completed_tour', 'true')
+  }
+
+  const handleStartTour = () => {
+    setTourActive(true)
+    setTourStep(1)
+    setActiveTab(TABS.TIMELINE)
+  }
+
+  useEffect(() => {
+    if (currentUser && !localStorage.getItem('has_completed_tour')) {
+      handleStartTour()
+    }
+  }, [currentUser])
+
   // ── Full-screen loader while resolving a /join/:id deep link
   if (urlLoading) {
     return (
@@ -286,10 +399,23 @@ export default function App() {
   selectableDays.forEach(d => {
     DAY_DATES[d.day] = d.date
   })
-  const enrichedTimelineItems = timelineItems.map(item => ({
+  const enrichedTimelineItems = (tourActive
+    ? [...MOCK_TOUR_TIMELINE_ITEMS, ...timelineItems].sort((a, b) =>
+        a.day !== b.day ? a.day - b.day : a.time.localeCompare(b.time)
+      )
+    : timelineItems
+  ).map(item => ({
     ...item,
     date: DAY_DATES[item.day] || DAY_DATES[1],
   }))
+
+  const enrichedIdeaItems = tourActive
+    ? [...MOCK_TOUR_IDEA_ITEMS, ...ideaItems]
+    : ideaItems
+
+  const enrichedExpenseItems = tourActive
+    ? [...MOCK_TOUR_EXPENSE_ITEMS, ...expenseItems]
+    : expenseItems
 
   // ── Timeline handlers ──────────────────────────────────────
   const handleAddEvent = async ({ day, time, title, location, category, note, googleMapsUrl }) => {
@@ -525,6 +651,7 @@ export default function App() {
         activeTab={activeTab}
         onLeave={handleLeave}
         onManage={isLeader ? handleManageTrip : undefined}
+        onStartTour={handleStartTour}
       />
 
       <main className="tab-content" role="main">
@@ -539,7 +666,7 @@ export default function App() {
         )}
         {activeTab === TABS.IDEAS && (
           <IdeaBucketTab
-            items={ideaItems}
+            items={enrichedIdeaItems}
             onUpvote={handleUpvoteIdea}
             onMoveToTimeline={handleMoveToTimeline}
             onAddIdea={handleAddIdea}
@@ -551,7 +678,7 @@ export default function App() {
         )}
         {activeTab === TABS.EXPENSES && (
           <ExpensesTab
-            items={expenseItems}
+            items={enrichedExpenseItems}
             members={members}
             onAddExpense={handleAddExpense}
             onDeleteExpense={handleDeleteExpense}
@@ -560,6 +687,15 @@ export default function App() {
       </main>
 
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} tabs={TABS} />
+
+      {tourActive && (
+        <OnboardingTour
+          activeStep={tourStep}
+          onNext={handleTourNext}
+          onBack={handleTourBack}
+          onSkip={handleTourFinish}
+        />
+      )}
     </div>
   )
 }

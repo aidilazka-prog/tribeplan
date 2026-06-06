@@ -124,6 +124,7 @@ export default function IdeaBucketTab({
 // ─────────────────────────────────────────────────────────────
 function IdeaCard({ idea, onUpvote, currentUser, onMoveClick }) {
   const hasVoted = idea.upvotedBy.includes(currentUser)
+  const isMock = idea.id && idea.id.toString().startsWith('tour-mock-')
 
   return (
     <li
@@ -135,9 +136,11 @@ function IdeaCard({ idea, onUpvote, currentUser, onMoveClick }) {
         <button
           id={`upvote-${idea.id}`}
           className={`upvote-btn${hasVoted ? ' upvote-btn--active' : ''}`}
-          onClick={() => onUpvote(idea.id, currentUser)}
+          onClick={() => !isMock && onUpvote(idea.id, currentUser)}
+          disabled={isMock}
           aria-pressed={hasVoted}
-          aria-label={`${hasVoted ? 'Remove vote' : 'Upvote'}: ${idea.title}`}
+          aria-label={isMock ? "Demo Idea (Disabled)" : (`${hasVoted ? 'Remove vote' : 'Upvote'}: ${idea.title}`)}
+          style={isMock ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
         >
           <svg
             width="15" height="15" viewBox="0 0 24 24"
@@ -161,8 +164,10 @@ function IdeaCard({ idea, onUpvote, currentUser, onMoveClick }) {
           <button
             id={`move-${idea.id}`}
             className="move-btn"
-            onClick={onMoveClick}
-            aria-label={`Move "${idea.title}" to timeline`}
+            onClick={() => !isMock && onMoveClick()}
+            disabled={isMock}
+            aria-label={isMock ? "Demo Idea (Disabled)" : `Move "${idea.title}" to timeline`}
+            style={isMock ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
