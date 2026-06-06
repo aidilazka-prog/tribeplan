@@ -654,7 +654,7 @@ export default function App() {
         onStartTour={handleStartTour}
       />
 
-      <main className={`tab-content${tourActive ? ' tab-content--tour-active' : ''}`} role="main">
+      <main className="tab-content" role="main">
         {activeTab === TABS.TIMELINE && (
           <TimelineTab
             items={enrichedTimelineItems}
