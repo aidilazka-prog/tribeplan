@@ -39,6 +39,22 @@ export default function OnboardingTour({ activeStep, onNext, onBack, onSkip }) {
     }
   }, [])
 
+  useEffect(() => {
+    if (activeStep === 1) return
+
+    const timer = setTimeout(() => {
+      const mockCard = document.querySelector('.tour-highlight-mock')
+      if (mockCard) {
+        mockCard.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        })
+      }
+    }, 150)
+
+    return () => clearTimeout(timer)
+  }, [activeStep])
+
   return (
     <div className="tour-overlay" role="dialog" aria-modal="true" aria-label="Onboarding Tour">
       {/* Visual cutout spotlight based on the active step */}

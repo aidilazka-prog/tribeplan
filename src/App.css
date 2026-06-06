@@ -21,3 +21,7 @@
   padding-bottom: calc(var(--nav-height) + 48px + 14px + var(--space-md));
 }
 
+.tab-content--tour-active {
+  padding-bottom: 240px !important;
+}
+

@@ -37,6 +37,10 @@
   flex-direction: column;
   gap: 12px;
   position: absolute;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  bottom: 95px;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   animation: tooltip-slide-up 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
@@ -44,18 +48,6 @@
 @keyframes tooltip-slide-up {
   from { transform: translateY(24px) scale(0.95); opacity: 0; }
   to { transform: translateY(0) scale(1); opacity: 1; }
-}
-
-/* Position tooltip based on active step */
-.tour-tooltip--step1 {
-  bottom: 90px;
-}
-
-.tour-tooltip--step2,
-.tour-tooltip--step3,
-.tour-tooltip--step4 {
-  bottom: auto;
-  top: 140px;
 }
 
 .tour-tooltip__header {
