@@ -20,20 +20,57 @@ const CATEGORY_COLORS = {
   transport:     '#94a3b8',
 }
 
-export default function TimelineTab({ items, onAddEvent, selectableDays = [] }) {
-  const [modalOpen, setModalOpen] = useState(false)
+import { useEffect } from 'react'
 
-  // Group items by day, sorted keys ascending
-  const days = items.reduce((acc, item) => {
+export default function TimelineTab({ items, onAddEvent, onEditEvent, onToggleDone, selectableDays = [] }) {
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingEvent, setEditingEvent] = useState(null)
+  const [now, setNow] = useState(new Date())
+
+  // Keep now updated every minute
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Map items to include parsed dateTime and isPast
+  const enrichedItems = items.map(item => {
+    const dtStr = `${item.date || '2026-07-10'}T${item.time || '00:00'}:00`
+    const dateTime = new Date(dtStr)
+    const isPast = now > dateTime
+    return { ...item, dateTime, isPast }
+  })
+
+  // Find the closest upcoming uncompleted event
+  const upcoming = enrichedItems.filter(item => !item.isPast && !item.isDone)
+  upcoming.sort((a, b) => a.dateTime - b.dateTime)
+  const closestUpcomingId = upcoming[0]?.id || null
+
+  // Group enriched items by day, sorted keys ascending
+  const days = enrichedItems.reduce((acc, item) => {
     const key = item.day
     if (!acc[key]) acc[key] = []
     acc[key].push(item)
     return acc
   }, {})
 
-  const handleSubmit = (formData) => {
-    onAddEvent(formData)
+  const handleEditClick = (item) => {
+    setEditingEvent(item)
+    setModalOpen(true)
+  }
+
+  const handleClose = () => {
     setModalOpen(false)
+    setEditingEvent(null)
+  }
+
+  const handleSubmit = (formData) => {
+    if (editingEvent) {
+      onEditEvent({ ...editingEvent, ...formData })
+    } else {
+      onAddEvent(formData)
+    }
+    handleClose()
   }
 
   return (
@@ -63,6 +100,10 @@ export default function TimelineTab({ items, onAddEvent, selectableDays = [] }) 
                       item={item}
                       isLast={idx === dayItems.length - 1}
                       isNew={item.id.startsWith('tl-') && /^\d{13}$/.test(item.id.slice(3))}
+                      isClosestUpcoming={item.id === closestUpcomingId}
+                      now={now}
+                      onEditClick={handleEditClick}
+                      onToggleDone={onToggleDone}
                     />
                   ))}
                 </div>
@@ -90,21 +131,46 @@ export default function TimelineTab({ items, onAddEvent, selectableDays = [] }) 
       {/* ── Modal ── */}
       <AddEventModal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={handleClose}
         onSubmit={handleSubmit}
         selectableDays={selectableDays}
+        initialValues={editingEvent}
+        existingEvents={items}
       />
     </>
   )
 }
 
-function TimelineCard({ item, isLast, isNew }) {
+function TimelineCard({ item, isLast, isNew, isClosestUpcoming, now, onEditClick, onToggleDone }) {
   const color = CATEGORY_COLORS[item.category] || 'var(--color-text-muted)'
   const icon  = CATEGORY_ICONS[item.category] || '📍'
 
+  // Determine countdown text
+  let countdownText = ''
+  if (isClosestUpcoming && item.dateTime) {
+    const diffMs = item.dateTime - now
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHrs = Math.floor(diffMins / 60)
+    const remMins = diffMins % 60
+    if (diffMins <= 0) {
+      countdownText = 'Starts now'
+    } else if (diffHrs === 0) {
+      countdownText = `Starts in ${diffMins}m`
+    } else {
+      countdownText = `Starts in ${diffHrs}h ${remMins}m`
+    }
+  }
+
+  const cardClasses = [
+    'timeline-card',
+    isNew ? 'timeline-card--new' : '',
+    item.isDone ? 'timeline-card--done' : '',
+    item.isPast ? 'timeline-card--past' : '',
+  ].filter(Boolean).join(' ')
+
   return (
     <article
-      className={`timeline-card${isNew ? ' timeline-card--new' : ''}`}
+      className={cardClasses}
       style={{ '--accent': color }}
       aria-label={item.title}
     >
@@ -118,15 +184,53 @@ function TimelineCard({ item, isLast, isNew }) {
         <div className="timeline-card__time">{item.time}</div>
         <div className="timeline-card__content">
           <div className="timeline-card__header-row">
-            <span className="timeline-card__category-icon" aria-hidden="true">{icon}</span>
-            <span
-              className="timeline-card__category-chip"
-              style={{ '--chip-color': color }}
-            >
-              {item.category}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span className="timeline-card__category-icon" aria-hidden="true">{icon}</span>
+              <span
+                className="timeline-card__category-chip"
+                style={{ '--chip-color': color }}
+              >
+                {item.category}
+              </span>
+            </div>
+            
+            {/* Actions & Countdown */}
+            <div className="timeline-card__actions-row">
+              {isClosestUpcoming && countdownText && (
+                <span className="timeline-card__countdown">⏱️ {countdownText}</span>
+              )}
+              <div className="timeline-card__actions">
+                <button
+                  type="button"
+                  className={`timeline-card__action-btn timeline-card__action-btn--done${item.isDone ? ' active' : ''}`}
+                  onClick={() => onToggleDone(item.id, item.isDone)}
+                  title={item.isDone ? "Mark as active" : "Mark as done"}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="3" strokeLinecap="round"
+                    strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className="timeline-card__action-btn timeline-card__action-btn--edit"
+                  onClick={() => onEditClick(item)}
+                  title="Edit event"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                    strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
           </div>
+          
           <h2 className="timeline-card__title">{item.title}</h2>
+          
           <div className="timeline-card__location">
             {item.googleMapsUrl ? (
               <a

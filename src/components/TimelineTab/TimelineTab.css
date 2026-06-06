@@ -222,6 +222,73 @@
   border-top: 1px solid var(--color-border);
 }
 
+/* ── Mark as Done & Past Auto-Grey Out ── */
+.timeline-card--done,
+.timeline-card--past {
+  opacity: 0.45;
+  filter: grayscale(0.55);
+}
+
+.timeline-card__header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.timeline-card__actions-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-left: auto;
+}
+
+.timeline-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.timeline-card__action-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.timeline-card__action-btn:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.timeline-card__action-btn--done.active {
+  color: var(--color-primary);
+  background: rgba(110, 231, 183, 0.15);
+}
+
+.timeline-card__action-btn--edit:hover {
+  color: var(--color-accent);
+}
+
+/* ── Countdown Badge ── */
+.timeline-card__countdown {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-accent);
+  background: rgba(251, 146, 60, 0.12);
+  border: 1px solid rgba(251, 146, 60, 0.25);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
 /* ── Floating Add Event button ──
    Fixed above the bottom nav bar, centered within the 480px app shell.
    Uses the same left/transform pattern as .bottom-nav so it stays put

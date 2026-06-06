@@ -166,6 +166,40 @@ export async function deleteTimelineEvent(eventId) {
   if (error) throw new Error(`[db/deleteTimelineEvent] ${error.message}`)
 }
 
+/**
+ * Update a timeline event.
+ */
+export async function updateTimelineEvent(eventId, { day_number, time_slot, title, notes, google_maps_url }) {
+  const { data, error } = await supabase
+    .from('timeline_events')
+    .update({
+      day_number,
+      time_slot,
+      title,
+      notes,
+      google_maps_url,
+    })
+    .eq('id', eventId)
+    .select()
+    .single()
+
+  return assert(data, error, 'updateTimelineEvent')
+}
+
+/**
+ * Toggle the done state of a timeline event.
+ */
+export async function toggleEventDone(eventId, isDone) {
+  const { data, error } = await supabase
+    .from('timeline_events')
+    .update({ is_done: isDone })
+    .eq('id', eventId)
+    .select()
+    .single()
+
+  return assert(data, error, 'toggleEventDone')
+}
+
 // ─────────────────────────────────────────────────────────────
 // IDEA BUCKET
 // ─────────────────────────────────────────────────────────────

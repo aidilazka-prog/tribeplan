@@ -17,16 +17,34 @@ const TABS = {
 
 // ── Map DB rows → app shape ───────────────────────────────────
 function toTimelineItem(row) {
+  let location = ''
+  let note = ''
+  let category = 'activity'
+  try {
+    if (row.notes && row.notes.trim().startsWith('{')) {
+      const parsed = JSON.parse(row.notes)
+      location = parsed.location || ''
+      note = parsed.note || ''
+      category = parsed.category || 'activity'
+    } else {
+      location = row.notes || ''
+      note = ''
+    }
+  } catch {
+    location = row.notes || ''
+    note = ''
+  }
   return {
     id:            row.id,
     day:           row.day_number,
     date:          null,               // derived from startDate in render
     time:          row.time_slot,
     title:         row.title,
-    location:      row.notes ?? '',    // PRD has no location column; use notes
-    note:          row.notes ?? '',
-    category:      'activity',
+    location,
+    note,
+    category,
     googleMapsUrl: row.google_maps_url ?? '',
+    isDone:        row.is_done ?? false,
   }
 }
 
@@ -226,6 +244,7 @@ export default function App() {
       id: tempId, day, date: DAY_DATES[day] ?? DAY_DATES[1],
       time, title, location: location || '', note: note || '', category,
       googleMapsUrl: googleMapsUrl || '',
+      isDone: false,
     }
     setTimelineItems(prev =>
       [...prev, optimistic].sort((a, b) =>
@@ -234,8 +253,13 @@ export default function App() {
     )
 
     try {
+      const notesJson = JSON.stringify({
+        location: location || '',
+        note: note || '',
+        category: category || 'activity'
+      })
       const row = await db.addTimelineEvent(tripConfig.id, {
-        day, time, title, note: note || location || '', googleMapsUrl
+        day, time, title, note: notesJson, googleMapsUrl
       })
       const real = { ...toTimelineItem(row), date: DAY_DATES[day] ?? DAY_DATES[1] }
       setTimelineItems(prev =>
@@ -246,6 +270,50 @@ export default function App() {
       console.error(err)
       setTimelineItems(prev => prev.filter(i => i.id !== tempId))
       setDbError(err.message)
+    }
+  }
+
+  const handleEditEvent = async (updatedEvent) => {
+    // Optimistic state update
+    setTimelineItems(prev =>
+      prev.map(i => i.id === updatedEvent.id ? { ...i, ...updatedEvent, day: Number(updatedEvent.day) } : i)
+        .sort((a, b) => a.day !== b.day ? a.day - b.day : a.time.localeCompare(b.time))
+    )
+
+    try {
+      const notesJson = JSON.stringify({
+        location: updatedEvent.location || '',
+        note: updatedEvent.note || '',
+        category: updatedEvent.category || 'activity',
+      })
+      await db.updateTimelineEvent(updatedEvent.id, {
+        day_number: Number(updatedEvent.day),
+        time_slot: updatedEvent.time,
+        title: updatedEvent.title,
+        notes: notesJson,
+        google_maps_url: updatedEvent.googleMapsUrl || null,
+      })
+    } catch (err) {
+      console.error(err)
+      setDbError(err.message)
+      loadTripData(tripConfig.id)
+    }
+  }
+
+  const handleToggleDone = async (eventId, currentIsDone) => {
+    const nextVal = !currentIsDone
+    setTimelineItems(prev =>
+      prev.map(i => i.id === eventId ? { ...i, isDone: nextVal } : i)
+    )
+
+    try {
+      await db.toggleEventDone(eventId, nextVal)
+    } catch (err) {
+      console.error(err)
+      setDbError(err.message)
+      setTimelineItems(prev =>
+        prev.map(i => i.id === eventId ? { ...i, isDone: currentIsDone } : i)
+      )
     }
   }
 
@@ -326,8 +394,13 @@ export default function App() {
     )
 
     try {
+      const notesJson = JSON.stringify({
+        location: locationText,
+        note: idea.description || '',
+        category: 'activity'
+      })
       const row = await db.promoteIdeaToTimeline(ideaId, tripConfig.id, {
-        day, time, title: idea.title, note: idea.description, googleMapsUrl,
+        day, time, title: idea.title, note: notesJson, googleMapsUrl,
       })
       const real = { ...toTimelineItem(row), date: DAY_DATES[day] ?? DAY_DATES[1] }
       setTimelineItems(prev =>
@@ -404,6 +477,8 @@ export default function App() {
           <TimelineTab
             items={enrichedTimelineItems}
             onAddEvent={handleAddEvent}
+            onEditEvent={handleEditEvent}
+            onToggleDone={handleToggleDone}
             selectableDays={selectableDays}
           />
         )}

@@ -20,24 +20,26 @@ const EMPTY_FORM = {
   googleMapsUrl: '',
 }
 
-export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDays }) {
+export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDays, initialValues = null, existingEvents = [] }) {
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showClashWarning, setShowClashWarning] = useState(false)
   const firstInputRef = useRef(null)
   const overlayRef = useRef(null)
   const locationInputRef = useRef(null)
   const autocompleteRef = useRef(null)
 
-  // Reset form whenever modal opens
+  // Reset form whenever modal opens or initialValues change
   useEffect(() => {
     if (isOpen) {
-      setForm(EMPTY_FORM)
+      setForm(initialValues || EMPTY_FORM)
       setErrors({})
+      setShowClashWarning(false)
       // Focus first field after animation settles
       setTimeout(() => firstInputRef.current?.focus(), 80)
     }
-  }, [isOpen])
+  }, [isOpen, initialValues])
 
   // Bind Google Places Autocomplete to location input field
   useEffect(() => {
@@ -104,8 +106,13 @@ export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDay
     return () => { document.body.style.overflow = '' }
   }, [isOpen])
 
-  const set = (field) => (e) =>
-    setForm(prev => ({ ...prev, [field]: e.target.type === 'number' ? Number(e.target.value) : e.target.value }))
+  const set = (field) => (e) => {
+    const val = e.target.type === 'number' ? Number(e.target.value) : e.target.value
+    setForm(prev => ({ ...prev, [field]: val }))
+    if (field === 'day' || field === 'time') {
+      setShowClashWarning(false)
+    }
+  }
 
   const validate = () => {
     const errs = {}
@@ -120,10 +127,25 @@ export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDay
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
 
+    const selectedDay = Number(form.day)
+    const selectedTime = form.time
+    
+    // Check if there is an existing event with the same Day and Time slot
+    const hasConflict = existingEvents.some(evt => 
+      evt.day === selectedDay && 
+      evt.time === selectedTime && 
+      evt.id !== form.id
+    )
+
+    if (hasConflict && !showClashWarning) {
+      setShowClashWarning(true)
+      return
+    }
+
     setIsSubmitting(true)
-    // Small artificial delay so the user sees the loading state (purely cosmetic)
     await new Promise(r => setTimeout(r, 300))
-    onSubmit({ ...form, day: Number(form.day) })
+    onSubmit({ ...form, day: selectedDay })
+    setShowClashWarning(false)
     setIsSubmitting(false)
   }
 
@@ -146,7 +168,9 @@ export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDay
         {/* Header */}
         <div className="modal-header">
           <div className="modal-header__icon" aria-hidden="true">📅</div>
-          <h2 id="modal-title" className="modal-header__title">Add New Event</h2>
+          <h2 id="modal-title" className="modal-header__title">
+            {initialValues ? 'Edit Event' : 'Add New Event'}
+          </h2>
           <button
             id="modal-close-btn"
             className="modal-close"
@@ -206,6 +230,12 @@ export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDay
               />
             </div>
           </div>
+
+          {showClashWarning && (
+            <div className="form-clash-warning" role="alert">
+              <span>⚠️ Scheduling Conflict: Another activity is already planned for this time!</span>
+            </div>
+          )}
 
           {/* Title */}
           <div className="form-field">
@@ -306,7 +336,7 @@ export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDay
                   <line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
               )}
-              Add to Timeline
+              {initialValues ? 'Save Changes' : 'Add to Timeline'}
             </button>
           </div>
         </form>

@@ -315,3 +315,19 @@ input[type="time"].form-input {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Clash warning banner */
+.form-clash-warning {
+  background: rgba(251, 146, 60, 0.12);
+  border: 1px solid rgba(251, 146, 60, 0.3);
+  color: var(--color-accent);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.4;
+  margin-top: 4px;
+}
