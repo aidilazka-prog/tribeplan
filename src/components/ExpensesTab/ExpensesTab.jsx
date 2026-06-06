@@ -11,11 +11,27 @@ const CATEGORY_META = {
   other:         { icon: '💳', label: 'Other' },
 }
 
+const CURRENCY_SYMBOLS = {
+  USD: '$',
+  IDR: 'Rp',
+  MYR: 'RM',
+  SGD: 'S$',
+}
+
+function formatAmount(amount, currency = 'USD') {
+  const symbol = CURRENCY_SYMBOLS[currency] || '$'
+  if (currency === 'IDR') {
+    return `${symbol}${Math.round(amount).toLocaleString('id-ID')}`
+  }
+  return `${symbol}${amount.toFixed(2)}`
+}
+
 const EMPTY_FORM = {
   description: '',
   amount: '',
   paidBy: '',
   category: 'food',
+  currency: 'USD',
 }
 
 // ── Balance engine ────────────────────────────────────────────
@@ -64,6 +80,37 @@ function computeSettlements(expenses, members) {
   return { settlements, net }
 }
 
+function computeSettlementsByCurrency(expenses, members) {
+  // Group expenses by currency
+  const expensesByCur = {}
+  expenses.forEach(exp => {
+    const cur = exp.currency || 'USD'
+    if (!expensesByCur[cur]) expensesByCur[cur] = []
+    expensesByCur[cur].push(exp)
+  })
+
+  const allSettlements = []
+  const allNet = {}
+  members.forEach(m => {
+    allNet[m] = {}
+  })
+
+  // For each currency, compute settlements
+  Object.entries(expensesByCur).forEach(([cur, curExpenses]) => {
+    const { settlements, net } = computeSettlements(curExpenses, members)
+    settlements.forEach(s => {
+      allSettlements.push({ ...s, currency: cur })
+    })
+    Object.entries(net).forEach(([member, val]) => {
+      if (allNet[member]) {
+        allNet[member][cur] = val
+      }
+    })
+  })
+
+  return { settlements: allSettlements, net: allNet }
+}
+
 // ── Main component ────────────────────────────────────────────
 export default function ExpensesTab({ items, members, onAddExpense, onDeleteExpense }) {
   const [formOpen, setFormOpen] = useState(false)
@@ -73,9 +120,29 @@ export default function ExpensesTab({ items, members, onAddExpense, onDeleteExpe
   const [deletingId, setDeletingId] = useState(null)
   const descRef = useRef(null)
 
-  const { settlements, net } = computeSettlements(items, members)
-  const totalSpend = items.reduce((s, e) => s + e.amount, 0)
-  const maxNetAbs  = Math.max(...Object.values(net).map(Math.abs), 1)
+  const { settlements, net } = computeSettlementsByCurrency(items, members)
+
+  const totalSpendByCurrency = items.reduce((acc, exp) => {
+    const cur = exp.currency || 'USD'
+    acc[cur] = (acc[cur] || 0) + exp.amount
+    return acc
+  }, {})
+
+  const maxNetAbsByCur = {}
+  Object.keys(CURRENCY_SYMBOLS).forEach(cur => {
+    let maxVal = 0
+    members.forEach(m => {
+      const val = Math.abs(net[m]?.[cur] || 0)
+      if (val > maxVal) maxVal = val
+    })
+    maxNetAbsByCur[cur] = maxVal || 1
+  })
+
+  const renderTotalSpend = () => {
+    const activeCurrencies = Object.keys(totalSpendByCurrency)
+    if (activeCurrencies.length === 0) return '$0'
+    return activeCurrencies.map(cur => formatAmount(totalSpendByCurrency[cur], cur)).join(' + ')
+  }
 
   // Auto-focus description when form opens
   useEffect(() => {
@@ -110,6 +177,7 @@ export default function ExpensesTab({ items, members, onAddExpense, onDeleteExpe
     onAddExpense({
       description: form.description.trim(),
       amount: Number(form.amount),
+      currency: form.currency || 'USD',
       paidBy: form.paidBy,
       splitAmong: [...splitAmong],
       category: form.category,
@@ -131,7 +199,7 @@ export default function ExpensesTab({ items, members, onAddExpense, onDeleteExpe
       {/* ── Stats strip ── */}
       <div className="exp-stats">
         <div className="exp-stats__cell">
-          <span className="exp-stats__value exp-stats__value--pink">${totalSpend.toFixed(0)}</span>
+          <span className="exp-stats__value exp-stats__value--pink" style={{ fontSize: '15px', wordBreak: 'break-all' }}>{renderTotalSpend()}</span>
           <span className="exp-stats__label">Total Spent</span>
         </div>
         <div className="exp-stats__divider" />
@@ -188,20 +256,44 @@ export default function ExpensesTab({ items, members, onAddExpense, onDeleteExpe
             />
           </div>
 
-          {/* Amount + Paid By row */}
+          {/* Currency + Amount + Paid By row */}
           <div className="exp-row">
-            <div className="exp-field exp-field--half">
+            <div className="exp-field exp-field--currency">
+              <label htmlFor="exp-currency" className="exp-label">Currency</label>
+              <div className="exp-select-wrap">
+                <select
+                  id="exp-currency"
+                  className="exp-select"
+                  value={form.currency || 'USD'}
+                  onChange={e => setForm(p => ({ ...p, currency: e.target.value }))}
+                >
+                  <option value="USD">USD</option>
+                  <option value="IDR">IDR</option>
+                  <option value="MYR">MYR</option>
+                  <option value="SGD">SGD</option>
+                </select>
+                <svg className="exp-select-arrow" width="11" height="11" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
+            </div>
+
+            <div className="exp-field exp-field--amount">
               <label htmlFor="exp-amount" className="exp-label">
-                Amount (USD) {errors.amount && <span className="exp-err">{errors.amount}</span>}
+                Amount {errors.amount && <span className="exp-err">{errors.amount}</span>}
               </label>
               <div className="exp-amount-wrap">
-                <span className="exp-amount-prefix">$</span>
+                <span className="exp-amount-prefix" style={{ fontSize: form.currency === 'IDR' || form.currency === 'SGD' ? '12px' : '14px' }}>
+                  {CURRENCY_SYMBOLS[form.currency || 'USD'] || '$'}
+                </span>
                 <input
                   id="exp-amount"
                   type="number"
                   min="0.01"
                   step="0.01"
                   className={`exp-input exp-input--amount${errors.amount ? ' exp-input--err' : ''}`}
+                  style={{ paddingLeft: form.currency === 'IDR' || form.currency === 'SGD' ? '28px' : '22px' }}
                   placeholder="0.00"
                   value={form.amount}
                   onChange={e => { setForm(p => ({ ...p, amount: e.target.value })); setErrors(p => ({ ...p, amount: '' })) }}
@@ -209,7 +301,7 @@ export default function ExpensesTab({ items, members, onAddExpense, onDeleteExpe
               </div>
             </div>
 
-            <div className="exp-field exp-field--half">
+            <div className="exp-field exp-field--paid-by">
               <label htmlFor="exp-paid-by" className="exp-label">Paid By</label>
               <div className="exp-select-wrap">
                 <select
@@ -279,7 +371,7 @@ export default function ExpensesTab({ items, members, onAddExpense, onDeleteExpe
             </div>
             {form.amount && splitAmong.size > 0 && (
               <p className="exp-per-person-preview">
-                ≈ <strong>${(Number(form.amount) / splitAmong.size).toFixed(2)}</strong> per person
+                ≈ <strong>{formatAmount(Number(form.amount) / splitAmong.size, form.currency)}</strong> per person
               </p>
             )}
           </div>
@@ -337,13 +429,13 @@ export default function ExpensesTab({ items, members, onAddExpense, onDeleteExpe
         ) : (
           <ul className="settlement-list" role="list" aria-label="Who owes whom">
             {settlements.map((s, i) => (
-              <li key={i} className="settlement-item" aria-label={`${s.from} owes ${s.to} $${s.amount.toFixed(2)}`}>
+              <li key={i} className="settlement-item" aria-label={`${s.from} owes ${s.to} ${formatAmount(s.amount, s.currency)}`}>
                 <div className="settlement-item__sentence">
                   <span className="settlement-item__debtor">{s.from}</span>
                   <span className="settlement-item__verb"> owes </span>
                   <span className="settlement-item__creditor">{s.to}</span>
                 </div>
-                <span className="settlement-item__amount">${s.amount.toFixed(2)}</span>
+                <span className="settlement-item__amount">{formatAmount(s.amount, s.currency)}</span>
               </li>
             ))}
           </ul>
@@ -355,24 +447,38 @@ export default function ExpensesTab({ items, members, onAddExpense, onDeleteExpe
         <h2 className="exp-section-title">Net Balances</h2>
         <ul className="net-list" role="list">
           {members.map(m => {
-            const val = net[m] || 0
-            const pct = Math.abs(val) / maxNetAbs * 100
-            const isPos = val > 0.005
-            const isNeg = val < -0.005
-            return (
-              <li key={m} className="net-item">
-                <span className="net-item__name">{m}</span>
-                <div className="net-item__bar-wrap" aria-hidden="true">
-                  <div
-                    className={`net-item__bar${isPos ? ' net-item__bar--pos' : isNeg ? ' net-item__bar--neg' : ''}`}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-                <span className={`net-item__val${isPos ? ' net-item__val--pos' : isNeg ? ' net-item__val--neg' : ''}`}>
-                  {isPos ? `+$${val.toFixed(2)}` : isNeg ? `-$${Math.abs(val).toFixed(2)}` : 'even'}
-                </span>
-              </li>
-            )
+            const balances = Object.entries(net[m] || {}).filter(([, val]) => Math.abs(val) >= 0.005)
+            if (balances.length === 0) {
+              return (
+                <li key={m} className="net-item">
+                  <span className="net-item__name">{m}</span>
+                  <div className="net-item__bar-wrap" aria-hidden="true">
+                    <div className="net-item__bar" style={{ width: '0%' }} />
+                  </div>
+                  <span className="net-item__val">even</span>
+                </li>
+              )
+            }
+            return balances.map(([cur, val]) => {
+              const maxVal = maxNetAbsByCur[cur] || 1
+              const pct = Math.abs(val) / maxVal * 100
+              const isPos = val > 0.005
+              const isNeg = val < -0.005
+              return (
+                <li key={`${m}-${cur}`} className="net-item">
+                  <span className="net-item__name">{m} <span style={{ fontSize: '9px', opacity: 0.6 }}>({cur})</span></span>
+                  <div className="net-item__bar-wrap" aria-hidden="true">
+                    <div
+                      className={`net-item__bar${isPos ? ' net-item__bar--pos' : isNeg ? ' net-item__bar--neg' : ''}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span className={`net-item__val${isPos ? ' net-item__val--pos' : isNeg ? ' net-item__val--neg' : ''}`}>
+                    {isPos ? `+${formatAmount(val, cur)}` : isNeg ? `-${formatAmount(Math.abs(val), cur)}` : 'even'}
+                  </span>
+                </li>
+              )
+            })
           })}
         </ul>
         <p className="net-legend">
@@ -410,7 +516,7 @@ function LedgerRow({ exp, isDeleting, onDelete }) {
 
   return (
     <li className={`ledger-row${isDeleting ? ' ledger-row--deleting' : ''}`}
-      aria-label={`${exp.description}, $${exp.amount}, paid by ${exp.paidBy}`}>
+      aria-label={`${exp.description}, ${formatAmount(exp.amount, exp.currency)}, paid by ${exp.paidBy}`}>
       <span className="ledger-row__icon" aria-hidden="true">{meta.icon}</span>
       <div className="ledger-row__body">
         <div className="ledger-row__desc">{exp.description}</div>
@@ -419,11 +525,11 @@ function LedgerRow({ exp, isDeleting, onDelete }) {
           <span className="ledger-row__dot" aria-hidden="true">·</span>
           <span>split {exp.splitAmong.length} ways</span>
           <span className="ledger-row__dot" aria-hidden="true">·</span>
-          <span className="ledger-row__per">${perPerson.toFixed(2)}/ea</span>
+          <span className="ledger-row__per">{formatAmount(perPerson, exp.currency)}/ea</span>
         </div>
       </div>
       <div className="ledger-row__right">
-        <span className="ledger-row__total">${exp.amount.toFixed(2)}</span>
+        <span className="ledger-row__total">{formatAmount(exp.amount, exp.currency)}</span>
         <button
           className="ledger-row__delete"
           onClick={onDelete}

@@ -74,7 +74,7 @@ export default function App() {
   const [ideaItems,     setIdeaItems]     = useState([])
 
   // ── Local-only (no DB column in PRD schema) ───────────────
-  const [expenseItems,  setExpenseItems]  = useState(EXPENSE_ITEMS)
+  const [expenseItems,  setExpenseItems]  = useState([])
 
   // ── UI state ──────────────────────────────────────────────
   const [loading,      setLoading]      = useState(false)
@@ -123,39 +123,72 @@ export default function App() {
     document.head.appendChild(script)
   }, [])
 
-  // ── Deep-link: read /join/:tripId from the URL on first load
+  // ── Session Restore & Deep-link logic on first load
   useEffect(() => {
     const match = window.location.pathname.match(/^\/join\/([^/]+)$/)
-    if (!match) return
+    if (match) {
+      const tripId = match[1]
+      setUrlLoading(true)
 
-    const tripId = match[1]
-    setUrlLoading(true)
-
-    Promise.all([
-      db.fetchTrip(tripId),
-      db.fetchMembers(tripId),
-    ])
-      .then(([tripRow, memberRows]) => {
-        setTripConfig({
-          id:         tripRow.id,
-          tripName:   tripRow.trip_name,
-          leaderName: tripRow.leader_name,
-          password:   tripRow.join_password,
-          members:    memberRows.map(r => r.name),
-          memberRows,
-          startDate:  tripRow.start_date || null,
-          endDate:    null,
-          joinCode:   tripRow.id.slice(0, 6).toUpperCase(),
+      Promise.all([
+        db.fetchTrip(tripId),
+        db.fetchMembers(tripId),
+      ])
+        .then(([tripRow, memberRows]) => {
+          setTripConfig({
+            id:         tripRow.id,
+            tripName:   tripRow.trip_name,
+            leaderName: tripRow.leader_name,
+            password:   tripRow.join_password,
+            members:    memberRows.map(r => r.name),
+            memberRows,
+            startDate:  tripRow.start_date || null,
+            endDate:    null,
+            joinCode:   tripRow.id.slice(0, 6).toUpperCase(),
+          })
+          setDeepLinkView('join')
+          // Clean the UUID out of the address bar (no reload)
+          window.history.replaceState({}, '', '/')
         })
-        setDeepLinkView('join')
-        // Clean the UUID out of the address bar (no reload)
-        window.history.replaceState({}, '', '/')
-      })
-      .catch(err => {
-        console.error('[deep-link]', err)
-        setDbError('Could not load the trip from this link. It may no longer exist.')
-      })
-      .finally(() => setUrlLoading(false))
+        .catch(err => {
+          console.error('[deep-link]', err)
+          setDbError('Could not load the trip from this link. It may no longer exist.')
+        })
+        .finally(() => setUrlLoading(false))
+    } else {
+      const savedTripId = localStorage.getItem('tribeplan_trip_id')
+      const savedMemberName = localStorage.getItem('tribeplan_member_name')
+
+      if (savedTripId && savedMemberName) {
+        setUrlLoading(true)
+        Promise.all([
+          db.fetchTrip(savedTripId),
+          db.fetchMembers(savedTripId),
+        ])
+          .then(([tripRow, memberRows]) => {
+            setTripConfig({
+              id:         tripRow.id,
+              tripName:   tripRow.trip_name,
+              leaderName: tripRow.leader_name,
+              password:   tripRow.join_password,
+              members:    memberRows.map(r => r.name),
+              memberRows,
+              startDate:  tripRow.start_date || null,
+              endDate:    null,
+              joinCode:   tripRow.id.slice(0, 6).toUpperCase(),
+            })
+            setCurrentUser(savedMemberName)
+            setActiveTab(TABS.TIMELINE)
+          })
+          .catch(err => {
+            console.error('[session-restore]', err)
+            localStorage.removeItem('tribeplan_trip_id')
+            localStorage.removeItem('tribeplan_member_name')
+            localStorage.removeItem('tribeplan_role')
+          })
+          .finally(() => setUrlLoading(false))
+      }
+    }
   }, []) // runs once on mount only
 
   // ── Create trip (leader) ───────────────────────────────────
@@ -165,9 +198,14 @@ export default function App() {
     setTripConfig(config)
     setCurrentUser(config.leaderName)
     setActiveTab(TABS.TIMELINE)
-    setExpenseItems(EXPENSE_ITEMS)
+    setExpenseItems([])
     setTimelineItems([])
     setIdeaItems([])
+
+    // Save to localStorage
+    localStorage.setItem('tribeplan_trip_id', config.id)
+    localStorage.setItem('tribeplan_member_name', config.leaderName)
+    localStorage.setItem('tribeplan_role', 'Leader')
   }
 
   // ── Join trip ──────────────────────────────────────────────
@@ -175,6 +213,14 @@ export default function App() {
     setCurrentUser(memberName)
     setManageConfig(null)
     setActiveTab(TABS.TIMELINE)
+
+    // Save to localStorage
+    if (tripConfig) {
+      const role = memberName === tripConfig.leaderName ? 'Leader' : 'Member'
+      localStorage.setItem('tribeplan_trip_id', tripConfig.id)
+      localStorage.setItem('tribeplan_member_name', memberName)
+      localStorage.setItem('tribeplan_role', role)
+    }
   }
 
   // ── Leader: open manage screen ────────────────────────────
@@ -188,10 +234,19 @@ export default function App() {
     setTripConfig(updatedConfig)
     setManageConfig(null)
     setCurrentUser(updatedConfig.leaderName)
+
+    // Update localStorage
+    localStorage.setItem('tribeplan_trip_id', updatedConfig.id)
+    localStorage.setItem('tribeplan_member_name', updatedConfig.leaderName)
+    localStorage.setItem('tribeplan_role', 'Leader')
   }
 
-  // ── Leave (keep tripConfig in memory for next join) ────────
+  // ── Leave (clear session keys and switch user) ────────────
   const handleLeave = () => {
+    // Clear localStorage
+    localStorage.removeItem('tribeplan_trip_id')
+    localStorage.removeItem('tribeplan_member_name')
+    localStorage.removeItem('tribeplan_role')
     setManageConfig(null)
     setCurrentUser(null)
   }
@@ -417,12 +472,12 @@ export default function App() {
   }
 
   // ── Expense handlers (local only, no DB) ───────────────────
-  const handleAddExpense = ({ description, amount, paidBy, splitAmong, category }) => {
+  const handleAddExpense = ({ description, amount, currency, paidBy, splitAmong, category }) => {
     setExpenseItems(prev => [{
       id: `exp-${Date.now()}`,
       description,
       amount:      parseFloat(amount),
-      currency:    'USD',
+      currency:    currency || 'USD',
       paidBy,      splitAmong,
       category:    category || 'other',
       date:        new Date().toISOString().split('T')[0],

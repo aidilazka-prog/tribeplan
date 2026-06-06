@@ -195,13 +195,18 @@
 
 .timeline-card__location-link {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 4px;
   color: var(--color-primary);
   text-decoration: none;
   transition: color 0.15s ease, opacity 0.15s ease;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+
+.timeline-card__location-link svg {
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .timeline-card__location-link:hover {
@@ -211,6 +216,31 @@
 
 .timeline-card__location-link:active {
   opacity: 0.7;
+}
+
+.timeline-card__location-stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.timeline-card__location-name {
+  font-weight: 600;
+  display: block;
+}
+
+.timeline-card__location-address {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  display: block;
+  font-weight: 400;
+  margin-top: 1px;
+}
+
+.timeline-card__location-link .timeline-card__location-address {
+  color: inherit;
+  opacity: 0.8;
 }
 
 .timeline-card__note {

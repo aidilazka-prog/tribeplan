@@ -185,7 +185,6 @@ const EMPTY_IDEA_FORM = { title: '', description: '', location: '' }
 
 function AddIdeaPanel({ members, currentUser, onSubmit, onClose }) {
   const [form, setForm] = useState(EMPTY_IDEA_FORM)
-  const [addedBy, setAddedBy] = useState(currentUser)
   const [titleError, setTitleError] = useState('')
   const overlayRef = useRef(null)
   const titleRef = useRef(null)
@@ -227,8 +226,20 @@ function AddIdeaPanel({ members, currentUser, onSubmit, onClose }) {
 
       autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace()
-        const address = place.formatted_address || place.name || ''
-        setForm(prev => ({ ...prev, location: address }))
+        const name = place.name
+        const address = place.formatted_address
+        
+        let displayVal = ''
+        if (name && address) {
+          if (address === name || address.startsWith(name)) {
+            displayVal = address
+          } else {
+            displayVal = `${name} - ${address}`
+          }
+        } else {
+          displayVal = address || name || ''
+        }
+        setForm(prev => ({ ...prev, location: displayVal }))
       })
 
       autocompleteRef.current = autocomplete
@@ -255,7 +266,7 @@ function AddIdeaPanel({ members, currentUser, onSubmit, onClose }) {
       finalDesc = finalDesc ? `${finalDesc}\n📍 Location: ${form.location}` : `📍 Location: ${form.location}`
     }
 
-    onSubmit({ title: form.title, description: finalDesc, addedBy })
+    onSubmit({ title: form.title, description: finalDesc, addedBy: currentUser })
   }
 
   return (
@@ -354,24 +365,7 @@ function AddIdeaPanel({ members, currentUser, onSubmit, onClose }) {
             />
           </div>
 
-          {/* Added by */}
-          <div className="move-field">
-            <span className="move-label">Adding as</span>
-            <div className="member-chips" role="group" aria-label="Who is adding this idea">
-              {members.map(member => (
-                <button
-                  key={member}
-                  type="button"
-                  id={`member-chip-${member}`}
-                  className={`member-chip${addedBy === member ? ' member-chip--active' : ''}`}
-                  onClick={() => setAddedBy(member)}
-                  aria-pressed={addedBy === member}
-                >
-                  {member}
-                </button>
-              ))}
-            </div>
-          </div>
+
 
           {/* Actions */}
           <div className="move-panel__actions">

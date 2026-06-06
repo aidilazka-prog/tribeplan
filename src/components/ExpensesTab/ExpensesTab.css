@@ -581,3 +581,15 @@
   border-color: rgba(248, 113, 113, 0.3);
   color: #f87171;
 }
+
+.exp-field--currency {
+  flex: 0 0 85px;
+}
+.exp-field--amount {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.exp-field--paid-by {
+  flex: 1 1 0;
+  min-width: 0;
+}

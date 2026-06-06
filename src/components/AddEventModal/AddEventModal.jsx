@@ -63,11 +63,23 @@ export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDay
 
       autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace()
-        const address = place.formatted_address || place.name || ''
+        const name = place.name
+        const address = place.formatted_address
+        
+        let displayVal = ''
+        if (name && address) {
+          if (address === name || address.startsWith(name)) {
+            displayVal = address
+          } else {
+            displayVal = `${name} - ${address}`
+          }
+        } else {
+          displayVal = address || name || ''
+        }
         
         let mapsUrl = ''
-        if (address) {
-          const query = encodeURIComponent(address)
+        if (displayVal) {
+          const query = encodeURIComponent(displayVal)
           const placeId = place.place_id || ''
           mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`
           if (placeId) {
@@ -75,7 +87,7 @@ export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDay
           }
         }
 
-        setForm(prev => ({ ...prev, location: address, googleMapsUrl: mapsUrl }))
+        setForm(prev => ({ ...prev, location: displayVal, googleMapsUrl: mapsUrl }))
       })
 
       autocompleteRef.current = autocomplete
