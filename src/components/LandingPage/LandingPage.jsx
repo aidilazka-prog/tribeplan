@@ -671,7 +671,7 @@ function JoinForm({ onBack, onJoin, tripConfig }) {
 }
 
 // ── Success screen ────────────────────────────────────────────
-const BASE_URL = 'tribeplan.app/join'
+const BASE_URL = 'tribeplan.vercel.app/join'
 
 function SuccessScreen({ config, isManageMode, onDone }) {
   // members: string[] for display; memberRows: [{ id, name }] from DB
