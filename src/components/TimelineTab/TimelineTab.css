@@ -193,6 +193,26 @@
   margin-top: 1px;
 }
 
+.timeline-card__location-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color 0.15s ease, opacity 0.15s ease;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.timeline-card__location-link:hover {
+  color: var(--color-primary-d);
+  text-decoration: underline;
+}
+
+.timeline-card__location-link:active {
+  opacity: 0.7;
+}
+
 .timeline-card__note {
   font-size: 12px;
   color: var(--color-text-muted);

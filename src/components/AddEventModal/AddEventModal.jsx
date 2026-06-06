@@ -17,6 +17,7 @@ const EMPTY_FORM = {
   location: '',
   category: 'activity',
   note: '',
+  googleMapsUrl: '',
 }
 
 export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDays }) {
@@ -61,7 +62,18 @@ export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDay
       autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace()
         const address = place.formatted_address || place.name || ''
-        setForm(prev => ({ ...prev, location: address }))
+        
+        let mapsUrl = ''
+        if (address) {
+          const query = encodeURIComponent(address)
+          const placeId = place.place_id || ''
+          mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`
+          if (placeId) {
+            mapsUrl += `&query_place_id=${placeId}`
+          }
+        }
+
+        setForm(prev => ({ ...prev, location: address, googleMapsUrl: mapsUrl }))
       })
 
       autocompleteRef.current = autocomplete

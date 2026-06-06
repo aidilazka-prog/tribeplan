@@ -137,15 +137,16 @@ export async function fetchTimelineEvents(tripId) {
  * Add a new event to the timeline.
  * Returns the inserted row.
  */
-export async function addTimelineEvent(tripId, { day, time, title, note }) {
+export async function addTimelineEvent(tripId, { day, time, title, note, googleMapsUrl }) {
   const { data, error } = await supabase
     .from('timeline_events')
     .insert({
-      trip_id:    tripId,
-      day_number: day,
-      time_slot:  time,
+      trip_id:          tripId,
+      day_number:       day,
+      time_slot:        time,
       title,
-      notes:      note || null,
+      notes:            note || null,
+      google_maps_url:  googleMapsUrl || null,
     })
     .select()
     .single()
@@ -240,16 +241,17 @@ export async function adjustUpvote(ideaId, currentUpvotes, delta) {
  *   2. Delete the idea_bucket row.
  * Returns the new timeline event row.
  */
-export async function promoteIdeaToTimeline(ideaId, tripId, { day, time, title, note }) {
+export async function promoteIdeaToTimeline(ideaId, tripId, { day, time, title, note, googleMapsUrl }) {
   const [{ data: evtRows, error: evtErr }] = await Promise.all([
     supabase
       .from('timeline_events')
       .insert({
-        trip_id:    tripId,
-        day_number: day,
-        time_slot:  time,
+        trip_id:          tripId,
+        day_number:       day,
+        time_slot:        time,
         title,
-        notes:      note || null,
+        notes:            note || null,
+        google_maps_url:  googleMapsUrl || null,
       })
       .select(),
   ])

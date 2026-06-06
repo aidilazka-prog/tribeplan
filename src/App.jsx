@@ -18,14 +18,15 @@ const TABS = {
 // ── Map DB rows → app shape ───────────────────────────────────
 function toTimelineItem(row) {
   return {
-    id:       row.id,
-    day:      row.day_number,
-    date:     null,               // derived from startDate in render
-    time:     row.time_slot,
-    title:    row.title,
-    location: row.notes ?? '',    // PRD has no location column; use notes
-    note:     row.notes ?? '',
-    category: 'activity',
+    id:            row.id,
+    day:           row.day_number,
+    date:          null,               // derived from startDate in render
+    time:          row.time_slot,
+    title:         row.title,
+    location:      row.notes ?? '',    // PRD has no location column; use notes
+    note:          row.notes ?? '',
+    category:      'activity',
+    googleMapsUrl: row.google_maps_url ?? '',
   }
 }
 
@@ -218,12 +219,13 @@ export default function App() {
   }))
 
   // ── Timeline handlers ──────────────────────────────────────
-  const handleAddEvent = async ({ day, time, title, location, category, note }) => {
+  const handleAddEvent = async ({ day, time, title, location, category, note, googleMapsUrl }) => {
     // Optimistic: add placeholder immediately
     const tempId = `tmp-${Date.now()}`
     const optimistic = {
       id: tempId, day, date: DAY_DATES[day] ?? DAY_DATES[1],
       time, title, location: location || '', note: note || '', category,
+      googleMapsUrl: googleMapsUrl || '',
     }
     setTimelineItems(prev =>
       [...prev, optimistic].sort((a, b) =>
@@ -232,7 +234,9 @@ export default function App() {
     )
 
     try {
-      const row = await db.addTimelineEvent(tripConfig.id, { day, time, title, note: note || location || '' })
+      const row = await db.addTimelineEvent(tripConfig.id, {
+        day, time, title, note: note || location || '', googleMapsUrl
+      })
       const real = { ...toTimelineItem(row), date: DAY_DATES[day] ?? DAY_DATES[1] }
       setTimelineItems(prev =>
         prev.map(i => i.id === tempId ? real : i)
@@ -297,13 +301,23 @@ export default function App() {
     const idea = ideaItems.find(i => i.id === ideaId)
     if (!idea) return
 
+    // Extract location from idea description if present (e.g. 📍 Location: Ubud, Bali)
+    let googleMapsUrl = ''
+    let locationText = 'To be confirmed'
+    const locMatch = idea.description.match(/📍 Location:\s*(.*)/)
+    if (locMatch) {
+      locationText = locMatch[1].trim()
+      googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationText)}`
+    }
+
     // Optimistic: remove from ideas, add to timeline
     setIdeaItems(prev => prev.filter(i => i.id !== ideaId))
     const tempId = `tmp-${Date.now()}`
     const optimistic = {
       id: tempId, day, date: DAY_DATES[day] ?? DAY_DATES[1],
-      time, title: idea.title, location: 'To be confirmed',
+      time, title: idea.title, location: locationText,
       note: idea.description, category: 'activity',
+      googleMapsUrl,
     }
     setTimelineItems(prev =>
       [...prev, optimistic].sort((a, b) =>
@@ -313,7 +327,7 @@ export default function App() {
 
     try {
       const row = await db.promoteIdeaToTimeline(ideaId, tripConfig.id, {
-        day, time, title: idea.title, note: idea.description,
+        day, time, title: idea.title, note: idea.description, googleMapsUrl,
       })
       const real = { ...toTimelineItem(row), date: DAY_DATES[day] ?? DAY_DATES[1] }
       setTimelineItems(prev =>
