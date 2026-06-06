@@ -108,7 +108,7 @@ export default function App() {
           password:   tripRow.join_password,
           members:    memberRows.map(r => r.name),
           memberRows,
-          startDate:  null,
+          startDate:  tripRow.start_date || null,
           endDate:    null,
           joinCode:   tripRow.id.slice(0, 6).toUpperCase(),
         })
@@ -191,7 +191,15 @@ export default function App() {
   // ── Dashboard ─────────────────────────────────────────────
   const isLeader  = currentUser === tripConfig.leaderName
   const members   = tripConfig.members   // string[]
-  const DAY_DATES = buildDayDates(tripConfig.startDate)
+  const selectableDays = getSelectableDays(tripConfig.startDate, tripConfig.endDate)
+  const DAY_DATES = {}
+  selectableDays.forEach(d => {
+    DAY_DATES[d.day] = d.date
+  })
+  const enrichedTimelineItems = timelineItems.map(item => ({
+    ...item,
+    date: DAY_DATES[item.day] || DAY_DATES[1],
+  }))
 
   // ── Timeline handlers ──────────────────────────────────────
   const handleAddEvent = async ({ day, time, title, location, category, note }) => {
@@ -363,7 +371,11 @@ export default function App() {
 
       <main className="tab-content" role="main">
         {activeTab === TABS.TIMELINE && (
-          <TimelineTab items={timelineItems} onAddEvent={handleAddEvent} />
+          <TimelineTab
+            items={enrichedTimelineItems}
+            onAddEvent={handleAddEvent}
+            selectableDays={selectableDays}
+          />
         )}
         {activeTab === TABS.IDEAS && (
           <IdeaBucketTab
@@ -373,7 +385,8 @@ export default function App() {
             onAddIdea={handleAddIdea}
             currentUser={currentUser}
             members={members}
-            timelineItems={timelineItems}
+            timelineItems={enrichedTimelineItems}
+            selectableDays={selectableDays}
           />
         )}
         {activeTab === TABS.EXPENSES && (
@@ -392,13 +405,37 @@ export default function App() {
 }
 
 // ── Helpers ───────────────────────────────────────────────────
-function buildDayDates(startDate) {
+function getSelectableDays(startDate, endDate) {
   const base = startDate ? new Date(startDate) : new Date('2026-07-10')
-  const result = {}
-  for (let i = 0; i < 30; i++) {
+  
+  // Calculate duration. If endDate is set, use it. Otherwise, default to 30 days.
+  let numDays = 30
+  if (startDate && endDate) {
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const diffTime = end - start
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
+    if (diffDays > 0) numDays = diffDays
+  }
+  
+  const days = []
+  for (let i = 0; i < numDays; i++) {
     const d = new Date(base)
     d.setDate(base.getDate() + i)
-    result[i + 1] = d.toISOString().split('T')[0]
+    const dateStr = d.toISOString().split('T')[0]
+    
+    const formattedDate = d.toLocaleDateString('en-US', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    })
+    
+    days.push({
+      day: i + 1,
+      date: dateStr,
+      label: `Day ${i + 1}`,
+      sub: formattedDate,
+    })
   }
-  return result
+  return days
 }

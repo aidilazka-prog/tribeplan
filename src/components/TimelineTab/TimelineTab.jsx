@@ -20,13 +20,7 @@ const CATEGORY_COLORS = {
   transport:     '#94a3b8',
 }
 
-const SELECTABLE_DAYS = [
-  { day: 1, date: '2026-07-10', label: 'Day 1 – Thu, 10 Jul' },
-  { day: 2, date: '2026-07-11', label: 'Day 2 – Fri, 11 Jul' },
-  { day: 3, date: '2026-07-12', label: 'Day 3 – Sat, 12 Jul' },
-]
-
-export default function TimelineTab({ items, onAddEvent }) {
+export default function TimelineTab({ items, onAddEvent, selectableDays = [] }) {
   const [modalOpen, setModalOpen] = useState(false)
 
   // Group items by day, sorted keys ascending
@@ -55,7 +49,7 @@ export default function TimelineTab({ items, onAddEvent }) {
                 <div className="timeline-day__header">
                   <span className="timeline-day__badge">Day {day}</span>
                   <span className="timeline-day__date">
-                    {formatDate(dayItems[0].date)}
+                    - {formatDate(dayItems[0].date)}
                   </span>
                   <span className="timeline-day__count">
                     {dayItems.length} event{dayItems.length !== 1 ? 's' : ''}
@@ -98,7 +92,7 @@ export default function TimelineTab({ items, onAddEvent }) {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onSubmit={handleSubmit}
-        selectableDays={SELECTABLE_DAYS}
+        selectableDays={selectableDays}
       />
     </>
   )
@@ -152,9 +146,16 @@ function TimelineCard({ item, isLast, isNew }) {
 }
 
 function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString('en-MY', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'long',
-  })
+  if (!dateStr) return ''
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return ''
+    return d.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    })
+  } catch {
+    return ''
+  }
 }

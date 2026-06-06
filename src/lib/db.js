@@ -35,6 +35,7 @@ export async function createTrip({ tripName, leaderName, password, members, star
       trip_name:     tripName,
       leader_name:   leaderName,
       join_password: password,
+      start_date:    startDate || null,
     })
     .select()
 

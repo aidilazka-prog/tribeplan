@@ -123,7 +123,9 @@ export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDay
                   onChange={set('day')}
                 >
                   {selectableDays.map(d => (
-                    <option key={d.day} value={d.day}>{d.label}</option>
+                    <option key={d.day} value={d.day}>
+                      {d.sub ? `${d.label} – ${d.sub}` : d.label}
+                    </option>
                   ))}
                 </select>
                 <svg className="form-select-arrow" width="12" height="12"

@@ -1,11 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import './IdeaBucketTab.css'
 
-const SELECTABLE_DAYS = [
-  { day: 1, label: 'Day 1', sub: 'Thu, 10 Jul', date: '2026-07-10' },
-  { day: 2, label: 'Day 2', sub: 'Fri, 11 Jul', date: '2026-07-11' },
-  { day: 3, label: 'Day 3', sub: 'Sat, 12 Jul', date: '2026-07-12' },
-]
+
 
 /** Convert "HH:MM" to total minutes for comparison */
 function toMins(t) {
@@ -29,6 +25,7 @@ export default function IdeaBucketTab({
   onAddIdea,
   members,
   timelineItems,
+  selectableDays = [],
 }) {
   const [movingIdeaId, setMovingIdeaId] = useState(null)
   const [addPanelOpen, setAddPanelOpen] = useState(false)
@@ -112,7 +109,7 @@ export default function IdeaBucketTab({
         <MovePanel
           idea={movingIdea}
           timelineItems={timelineItems}
-          selectableDays={SELECTABLE_DAYS}
+          selectableDays={selectableDays}
           onConfirm={(day, time) => {
             onMoveToTimeline(movingIdea.id, { day, time })
             setMovingIdeaId(null)
