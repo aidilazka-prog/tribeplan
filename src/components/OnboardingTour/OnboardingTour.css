@@ -175,3 +175,20 @@
   right: var(--space-sm);
   bottom: 80px;
 }
+
+/* Bright spotlight styling for mock data cards */
+.tour-highlight-mock {
+  position: relative !important;
+  z-index: 10001 !important;
+  border-color: var(--color-primary) !important;
+  animation: tour-pulse-highlight 2s infinite ease-in-out !important;
+}
+
+@keyframes tour-pulse-highlight {
+  0%, 100% {
+    box-shadow: 0 0 12px var(--color-primary), 0 4px 20px rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 24px var(--color-primary), 0 4px 30px rgba(0, 0, 0, 0.6);
+  }
+}

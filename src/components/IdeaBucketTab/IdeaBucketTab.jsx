@@ -128,7 +128,7 @@ function IdeaCard({ idea, onUpvote, currentUser, onMoveClick }) {
 
   return (
     <li
-      className={`idea-card${hasVoted ? ' idea-card--voted' : ''}`}
+      className={`idea-card${hasVoted ? ' idea-card--voted' : ''}${isMock ? ' tour-highlight-mock' : ''}`}
       role="listitem"
     >
       {/* Rank badge based on upvotes */}

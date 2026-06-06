@@ -161,11 +161,13 @@ function TimelineCard({ item, isLast, isNew, isClosestUpcoming, now, onEditClick
     }
   }
 
+  const isMock = item.id && item.id.toString().startsWith('tour-mock-')
   const cardClasses = [
     'timeline-card',
     isNew ? 'timeline-card--new' : '',
     item.isDone ? 'timeline-card--done' : '',
     item.isPast ? 'timeline-card--past' : '',
+    isMock ? 'tour-highlight-mock' : '',
   ].filter(Boolean).join(' ')
 
   return (

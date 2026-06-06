@@ -516,7 +516,7 @@ function LedgerRow({ exp, isDeleting, onDelete }) {
   const isMock = exp.id && exp.id.toString().startsWith('tour-mock-')
 
   return (
-    <li className={`ledger-row${isDeleting ? ' ledger-row--deleting' : ''}`}
+    <li className={`ledger-row${isDeleting ? ' ledger-row--deleting' : ''}${isMock ? ' tour-highlight-mock' : ''}`}
       aria-label={`${exp.description}, ${formatAmount(exp.amount, exp.currency)}, paid by ${exp.paidBy}`}>
       <span className="ledger-row__icon" aria-hidden="true">{meta.icon}</span>
       <div className="ledger-row__body">
