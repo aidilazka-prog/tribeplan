@@ -1,0 +1,249 @@
+/* ================================================================
+   TimelineTab.css  –  v2  (with FAB + new-item highlight)
+   ================================================================ */
+
+.timeline-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  /* No padding-bottom needed here — .tab-content handles clearance for FAB + nav */
+}
+
+/* ── Day group ── */
+.timeline-day__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.timeline-day__badge {
+  background: rgba(110, 231, 183, 0.12);
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(110, 231, 183, 0.25);
+  flex-shrink: 0;
+}
+
+.timeline-day__date {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  flex: 1;
+}
+
+.timeline-day__count {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  flex-shrink: 0;
+}
+
+/* ── Cards list ── */
+.timeline-day__items {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Card ── */
+.timeline-card {
+  display: flex;
+  gap: var(--space-sm);
+  animation: card-enter 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.timeline-card--new {
+  animation: card-enter-new 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes card-enter-new {
+  from { opacity: 0; transform: translateX(-12px) scale(0.97); }
+  to   { opacity: 1; transform: translateX(0)    scale(1); }
+}
+
+/* Connector column */
+.timeline-card__connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 20px;
+  flex-shrink: 0;
+  padding-top: 18px;
+}
+
+.timeline-card__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent, var(--color-primary));
+  flex-shrink: 0;
+  box-shadow: 0 0 8px var(--accent, var(--color-primary));
+}
+
+.timeline-card--new .timeline-card__dot {
+  animation: dot-pulse 1.5s ease-in-out 3;
+}
+
+@keyframes dot-pulse {
+  0%, 100% { box-shadow: 0 0 8px  var(--accent, var(--color-primary)); }
+  50%       { box-shadow: 0 0 18px var(--accent, var(--color-primary)); }
+}
+
+.timeline-card__line {
+  width: 2px;
+  flex: 1;
+  margin-top: 4px;
+  background: linear-gradient(to bottom, var(--color-border), transparent);
+  min-height: 24px;
+}
+
+/* Card body */
+.timeline-card__body {
+  flex: 1;
+  display: flex;
+  gap: var(--space-sm);
+  padding-bottom: var(--space-lg);
+}
+
+.timeline-card__time {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  width: 38px;
+  flex-shrink: 0;
+  padding-top: 14px;
+  line-height: 1;
+}
+
+.timeline-card__content {
+  flex: 1;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--accent, var(--color-primary));
+  border-radius: var(--radius-md);
+  padding: 10px var(--space-md);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.timeline-card__content:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card);
+}
+
+.timeline-card--new .timeline-card__content {
+  border-color: rgba(110, 231, 183, 0.35);
+  background: rgba(110, 231, 183, 0.04);
+}
+
+/* Header row: emoji + category chip */
+.timeline-card__header-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+
+.timeline-card__category-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.timeline-card__category-chip {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: capitalize;
+  color: var(--chip-color, var(--color-text-muted));
+  background: color-mix(in srgb, var(--chip-color, var(--color-text-muted)) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--chip-color, var(--color-text-muted)) 30%, transparent);
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+}
+
+.timeline-card__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 5px;
+  line-height: 1.3;
+}
+
+.timeline-card__location {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.timeline-card__location svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.timeline-card__note {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  padding-top: 7px;
+  margin-top: 6px;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ── Floating Add Event button ──
+   Fixed above the bottom nav bar, centered within the 480px app shell.
+   Uses the same left/transform pattern as .bottom-nav so it stays put
+   regardless of scroll position or content height.
+   ─────────────────────────────────────────────────────────────────── */
+.add-event-fab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-d));
+  color: #0d1117;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 12px 22px;
+  cursor: pointer;
+  white-space: nowrap;
+
+  /* ✅ Fixed to viewport bottom, centered like the nav bar */
+  position: fixed;
+  bottom: calc(var(--nav-height) + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(480px - 2 * var(--space-md)); /* stay inside app shell */
+
+  box-shadow: 0 4px 20px rgba(110, 231, 183, 0.4),
+              0 0   0  1px rgba(110, 231, 183, 0.15);
+  transition: box-shadow 0.18s ease,
+              transform  0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  -webkit-tap-highlight-color: transparent;
+  z-index: 90; /* below modal (200) and nav (100) */
+}
+
+.add-event-fab:hover {
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 8px 28px rgba(110, 231, 183, 0.55),
+              0 0   0  1px rgba(110, 231, 183, 0.2);
+}
+
+.add-event-fab:active {
+  transform: translateX(-50%) scale(0.96);
+  box-shadow: 0 2px 12px rgba(110, 231, 183, 0.3);
+}

@@ -1,0 +1,127 @@
+.trip-header {
+  padding: var(--space-md) var(--space-md) var(--space-sm);
+  background: linear-gradient(
+    160deg,
+    rgba(110, 231, 183, 0.08) 0%,
+    rgba(13, 17, 23, 0) 60%
+  );
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+/* Top row: info + leave button */
+.trip-header__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: 4px;
+}
+
+.trip-header__info { flex: 1; min-width: 0; }
+
+.trip-header__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: 3px;
+  flex-wrap: wrap;
+}
+
+.trip-header__leader-badge {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-primary);
+  background: rgba(110, 231, 183, 0.1);
+  border: 1px solid rgba(110, 231, 183, 0.2);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+}
+
+.trip-header__dates {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.trip-header__title {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Leave/switch button */
+.trip-header__actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.trip-header__action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Manage button — emerald accent */
+.trip-header__action-btn--manage:hover {
+  color: var(--color-primary);
+  border-color: rgba(110, 231, 183, 0.4);
+  background: rgba(110, 231, 183, 0.08);
+}
+
+/* Leave button — red accent */
+.trip-header__action-btn:not(.trip-header__action-btn--manage):hover {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.35);
+  background: rgba(248, 113, 113, 0.08);
+}
+
+
+/* Bottom row: tab label + active user */
+.trip-header__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.trip-header__tab-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.trip-header__user-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+}
+
+.trip-header__user-badge--leader {
+  color: var(--color-primary);
+  background: rgba(110, 231, 183, 0.08);
+  border-color: rgba(110, 231, 183, 0.25);
+}
+

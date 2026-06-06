@@ -1,0 +1,85 @@
+/* ============================================================
+   TribePlan – Global Design System
+   ============================================================ */
+
+/* ── Google Fonts already loaded via index.html ── */
+
+/* ── CSS Custom Properties ── */
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Palette – deep ocean + warm coral accent */
+  --color-bg:        #0d1117;
+  --color-surface:   #161b22;
+  --color-surface-2: #1f2937;
+  --color-border:    #30363d;
+  --color-text:      #e6edf3;
+  --color-text-muted:#8b949e;
+
+  --color-primary:   #6ee7b7;   /* emerald-300 */
+  --color-primary-d: #34d399;   /* emerald-400 */
+  --color-accent:    #fb923c;   /* orange-400 */
+  --color-accent-d:  #f97316;   /* orange-500 */
+  --color-idea:      #a78bfa;   /* violet-400 */
+  --color-expense:   #f472b6;   /* pink-400 */
+
+  /* Tabs */
+  --tab-timeline: var(--color-primary);
+  --tab-idea:     var(--color-idea);
+  --tab-expense:  var(--color-expense);
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  /* Shadows */
+  --shadow-card: 0 2px 16px rgba(0,0,0,0.35);
+  --shadow-nav:  0 -4px 24px rgba(0,0,0,0.45);
+
+  /* Nav height – used to prevent content being hidden behind it */
+  --nav-height: 72px;
+}
+
+/* ── Reset ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: var(--radius-pill); }
+
+/* ── Utility ── */
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+}
