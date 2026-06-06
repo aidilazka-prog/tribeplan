@@ -7,6 +7,7 @@ import TripHeader     from './components/TripHeader/TripHeader'
 import TimelineTab    from './components/TimelineTab/TimelineTab'
 import IdeaBucketTab  from './components/IdeaBucketTab/IdeaBucketTab'
 import ExpensesTab    from './components/ExpensesTab/ExpensesTab'
+import PackingTab     from './components/PackingTab/PackingTab'
 import OnboardingTour from './components/OnboardingTour/OnboardingTour'
 import './App.css'
 
@@ -14,6 +15,7 @@ const TABS = {
   TIMELINE: 'timeline',
   IDEAS:    'ideas',
   EXPENSES: 'expenses',
+  PACKING:  'packing',
 }
 
 // ── Map DB rows → app shape ───────────────────────────────────
@@ -727,6 +729,12 @@ export default function App() {
             members={members}
             onAddExpense={handleAddExpense}
             onDeleteExpense={handleDeleteExpense}
+          />
+        )}
+        {activeTab === TABS.PACKING && (
+          <PackingTab
+            tripId={tripConfig?.id}
+            members={members}
           />
         )}
       </main>

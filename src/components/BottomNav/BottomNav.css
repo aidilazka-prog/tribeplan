@@ -58,6 +58,7 @@
 .nav-item--timeline.nav-item--active { color: var(--tab-timeline); }
 .nav-item--ideas.nav-item--active    { color: var(--tab-idea); }
 .nav-item--expenses.nav-item--active { color: var(--tab-expense); }
+.nav-item--packing.nav-item--active  { color: var(--tab-packing); }
 
 /* Active indicator dot */
 .nav-indicator {
@@ -73,6 +74,7 @@
 .nav-item--timeline .nav-indicator { background: var(--tab-timeline); }
 .nav-item--ideas .nav-indicator    { background: var(--tab-idea); }
 .nav-item--expenses .nav-indicator { background: var(--tab-expense); }
+.nav-item--packing .nav-indicator  { background: var(--tab-packing); }
 
 @keyframes dot-pop {
   from { transform: scale(0); opacity: 0; }

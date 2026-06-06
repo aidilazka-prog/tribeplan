@@ -1,0 +1,318 @@
+/* ================================================================
+   PackingTab.css  –  Family Packing List UI
+   ================================================================ */
+
+.packing-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.packing-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.packing-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+.packing-subtitle {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+/* ── Item Input Form ── */
+.packing-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top: 2.5px solid var(--tab-packing);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
+.form-row {
+  display: flex;
+  gap: var(--space-sm);
+  width: 100%;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.form-field.flex-1 {
+  flex: 1;
+}
+
+.form-field.flex-2 {
+  flex: 2;
+}
+
+/* Inputs & Dropdowns */
+.form-input,
+.form-select {
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  padding: 8px 10px;
+  height: 38px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+}
+
+.form-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.8;
+}
+
+.form-input:focus,
+.form-select:focus {
+  border-color: var(--tab-packing);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+}
+
+.form-input:disabled,
+.form-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Add Button styling override */
+.add-item-btn {
+  background: linear-gradient(135deg, var(--tab-packing), #0ea5e9);
+  color: #0d1117;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 16px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-item-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4);
+}
+
+.add-item-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.add-item-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Error message banner */
+.packing-error {
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  border-radius: var(--radius-md);
+  color: #f87171;
+  padding: 10px 12px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Content List Section ── */
+.packing-content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Empty State */
+.packing-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl) var(--space-md);
+  background: rgba(22, 27, 34, 0.4);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  gap: 12px;
+  margin-top: var(--space-md);
+}
+
+.packing-empty-icon {
+  font-size: 48px;
+}
+
+.packing-empty-state h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.packing-empty-state p {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  max-width: 280px;
+}
+
+/* Groups */
+.packing-group {
+  margin-bottom: var(--space-lg);
+}
+
+.packing-group-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.packing-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Item row */
+.packing-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(22, 27, 34, 0.5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-sm);
+  transition: all 0.22s cubic-bezier(0.25, 0.8, 0.25, 1);
+  gap: 12px;
+}
+
+.packing-item-row:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(22, 27, 34, 0.8);
+}
+
+.packing-item-row--packed {
+  background: rgba(22, 27, 34, 0.25);
+  border-color: rgba(48, 54, 61, 0.5);
+  opacity: 0.55;
+}
+
+.packing-item-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex: 1;
+  min-width: 0;
+}
+
+.packing-item-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.packing-item-row--packed .packing-item-name {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+.packing-item-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-shrink: 0;
+}
+
+/* Custom Checkbox */
+.packing-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 2px solid var(--color-border);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  color: #0d1117; /* Checkmark stroke color */
+  flex-shrink: 0;
+}
+
+.packing-checkbox:hover {
+  border-color: var(--tab-packing);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+}
+
+.packing-checkbox--checked {
+  background: var(--tab-packing);
+  border-color: var(--tab-packing);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+}
+
+/* Assigned Member Chip */
+.packing-member-chip {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: var(--tab-packing);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Trash button */
+.packing-delete-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.packing-delete-btn:hover {
+  color: var(--color-accent);
+  background: rgba(251, 146, 60, 0.1);
+}

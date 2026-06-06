@@ -314,3 +314,65 @@ export async function promoteIdeaToTimeline(ideaId, tripId, { day, time, title, 
 
   return evtRows[0]
 }
+
+// ─────────────────────────────────────────────────────────────
+// PACKING ITEMS
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Fetch all packing items for a trip.
+ */
+export async function fetchPackingItems(tripId) {
+  const { data, error } = await supabase
+    .from('packing_items')
+    .select('*')
+    .eq('trip_id', tripId)
+    .order('id', { ascending: true })
+
+  return assert(data, error, 'fetchPackingItems')
+}
+
+/**
+ * Add a new item to the packing list.
+ */
+export async function addPackingItem(tripId, { itemName, category, assignedTo }) {
+  const { data, error } = await supabase
+    .from('packing_items')
+    .insert({
+      trip_id: tripId,
+      item_name: itemName,
+      category,
+      assigned_to: assignedTo || null,
+      is_packed: false,
+    })
+    .select()
+    .single()
+
+  return assert(data, error, 'addPackingItem')
+}
+
+/**
+ * Toggle the packed status of a packing item.
+ */
+export async function togglePackingItem(itemId, isPacked) {
+  const { data, error } = await supabase
+    .from('packing_items')
+    .update({ is_packed: isPacked })
+    .eq('id', itemId)
+    .select()
+    .single()
+
+  return assert(data, error, 'togglePackingItem')
+}
+
+/**
+ * Delete a packing item.
+ */
+export async function deletePackingItem(itemId) {
+  const { error } = await supabase
+    .from('packing_items')
+    .delete()
+    .eq('id', itemId)
+
+  if (error) throw new Error(`[db/deletePackingItem] ${error.message}`)
+}

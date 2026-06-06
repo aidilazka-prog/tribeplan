@@ -27,6 +27,7 @@
   --tab-timeline: var(--color-primary);
   --tab-idea:     var(--color-idea);
   --tab-expense:  var(--color-expense);
+  --tab-packing:  #38bdf8; /* sky-400 */
 
   /* Spacing */
   --space-xs: 4px;
