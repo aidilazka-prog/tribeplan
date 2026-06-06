@@ -181,7 +181,7 @@ function IdeaCard({ idea, onUpvote, currentUser, onMoveClick }) {
 }
 
 // ─────────────────────────────────────────────────────────────
-const EMPTY_IDEA_FORM = { title: '', description: '' }
+const EMPTY_IDEA_FORM = { title: '', description: '', location: '' }
 
 function AddIdeaPanel({ members, currentUser, onSubmit, onClose }) {
   const [form, setForm] = useState(EMPTY_IDEA_FORM)
@@ -189,6 +189,8 @@ function AddIdeaPanel({ members, currentUser, onSubmit, onClose }) {
   const [titleError, setTitleError] = useState('')
   const overlayRef = useRef(null)
   const titleRef = useRef(null)
+  const locationInputRef = useRef(null)
+  const autocompleteRef = useRef(null)
 
   useEffect(() => {
     setTimeout(() => titleRef.current?.focus(), 80)
@@ -205,10 +207,55 @@ function AddIdeaPanel({ members, currentUser, onSubmit, onClose }) {
     return () => { document.body.style.overflow = '' }
   }, [])
 
+  // Bind Google Places Autocomplete to location input field
+  useEffect(() => {
+    let active = true
+
+    function initAutocomplete() {
+      if (!window.google?.maps?.places) {
+        setTimeout(() => {
+          if (active) initAutocomplete()
+        }, 200)
+        return
+      }
+
+      if (!locationInputRef.current) return
+
+      const autocomplete = new window.google.maps.places.Autocomplete(locationInputRef.current, {
+        types: ['geocode', 'establishment'],
+      })
+
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace()
+        const address = place.formatted_address || place.name || ''
+        setForm(prev => ({ ...prev, location: address }))
+      })
+
+      autocompleteRef.current = autocomplete
+    }
+
+    const timer = setTimeout(initAutocomplete, 100)
+
+    return () => {
+      active = false
+      clearTimeout(timer)
+      if (window.google?.maps?.event && autocompleteRef.current) {
+        window.google.maps.event.clearInstanceListeners(autocompleteRef.current)
+      }
+    }
+  }, [])
+
   const handleSubmit = e => {
     e.preventDefault()
     if (!form.title.trim()) { setTitleError('Title is required'); return }
-    onSubmit({ title: form.title, description: form.description, addedBy })
+
+    // Append location to description if present
+    let finalDesc = form.description
+    if (form.location?.trim()) {
+      finalDesc = finalDesc ? `${finalDesc}\n📍 Location: ${form.location}` : `📍 Location: ${form.location}`
+    }
+
+    onSubmit({ title: form.title, description: finalDesc, addedBy })
   }
 
   return (
@@ -288,6 +335,22 @@ function AddIdeaPanel({ members, currentUser, onSubmit, onClose }) {
               maxLength={200}
               rows={3}
               onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+            />
+          </div>
+
+          {/* Location / Address Autocomplete */}
+          <div className="move-field">
+            <label htmlFor="idea-location" className="move-label">
+              Address / Location <span className="idea-optional">(optional)</span>
+            </label>
+            <input
+              id="idea-location"
+              ref={locationInputRef}
+              type="text"
+              className="idea-input"
+              placeholder="e.g. Ubud, Bali"
+              value={form.location}
+              onChange={e => setForm(p => ({ ...p, location: e.target.value }))}
             />
           </div>
 

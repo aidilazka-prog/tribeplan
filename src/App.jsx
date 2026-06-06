@@ -88,6 +88,22 @@ export default function App() {
     }
   }, [tripConfig?.id, loadTripData])
 
+  // ── Load Google Maps JavaScript API (Places library) ────────
+  useEffect(() => {
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+    if (!apiKey) return
+
+    const scriptId = 'google-maps-script'
+    if (document.getElementById(scriptId)) return
+
+    const script = document.createElement('script')
+    script.id = scriptId
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
+    script.async = true
+    script.defer = true
+    document.head.appendChild(script)
+  }, [])
+
   // ── Deep-link: read /join/:tripId from the URL on first load
   useEffect(() => {
     const match = window.location.pathname.match(/^\/join\/([^/]+)$/)

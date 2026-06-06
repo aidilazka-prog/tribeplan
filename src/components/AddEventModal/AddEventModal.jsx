@@ -25,6 +25,8 @@ export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDay
   const [isSubmitting, setIsSubmitting] = useState(false)
   const firstInputRef = useRef(null)
   const overlayRef = useRef(null)
+  const locationInputRef = useRef(null)
+  const autocompleteRef = useRef(null)
 
   // Reset form whenever modal opens
   useEffect(() => {
@@ -33,6 +35,46 @@ export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDay
       setErrors({})
       // Focus first field after animation settles
       setTimeout(() => firstInputRef.current?.focus(), 80)
+    }
+  }, [isOpen])
+
+  // Bind Google Places Autocomplete to location input field
+  useEffect(() => {
+    if (!isOpen) return
+
+    let active = true
+
+    function initAutocomplete() {
+      if (!window.google?.maps?.places) {
+        setTimeout(() => {
+          if (active) initAutocomplete()
+        }, 200)
+        return
+      }
+
+      if (!locationInputRef.current) return
+
+      const autocomplete = new window.google.maps.places.Autocomplete(locationInputRef.current, {
+        types: ['geocode', 'establishment'],
+      })
+
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace()
+        const address = place.formatted_address || place.name || ''
+        setForm(prev => ({ ...prev, location: address }))
+      })
+
+      autocompleteRef.current = autocomplete
+    }
+
+    const timer = setTimeout(initAutocomplete, 100)
+
+    return () => {
+      active = false
+      clearTimeout(timer)
+      if (window.google?.maps?.event && autocompleteRef.current) {
+        window.google.maps.event.clearInstanceListeners(autocompleteRef.current)
+      }
     }
   }, [isOpen])
 
@@ -180,6 +222,7 @@ export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDay
             </label>
             <input
               id="ae-location"
+              ref={locationInputRef}
               type="text"
               className={`form-input${errors.location ? ' form-input--error' : ''}`}
               placeholder="e.g. Jl. Subak Sok Wayah, Ubud"
