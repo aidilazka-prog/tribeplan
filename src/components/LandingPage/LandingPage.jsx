@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import * as db from '../../lib/db'
 import './LandingPage.css'
 
-export default function LandingPage({ onCreateTrip, onJoinTrip, onUpdateTrip, activeTripConfig, manageConfig }) {
+export default function LandingPage({ onCreateTrip, onJoinTrip, onUpdateTrip, activeTripConfig, manageConfig, initialView }) {
   const [view, setView] = useState('home') // 'home' | 'create' | 'success' | 'join'
   const [pendingConfig, setPendingConfig] = useState(null)
 
@@ -13,6 +13,11 @@ export default function LandingPage({ onCreateTrip, onJoinTrip, onUpdateTrip, ac
       setView('success')
     }
   }, [manageConfig])
+
+  // When the app detects a /join/:id deep link, jump to the join view
+  useEffect(() => {
+    if (initialView) setView(initialView)
+  }, [initialView])
 
   const handleSuccess = (config) => {
     setPendingConfig(config)
@@ -685,7 +690,8 @@ function SuccessScreen({ config, isManageMode, onDone }) {
   const [saveErr,     setSaveErr]     = useState('')
   const inputRef = useRef(null)
 
-  const shareUrl = `${BASE_URL}/${config.joinCode.toLowerCase()}`
+  // Use the real Supabase UUID so the /join/:id deep-link resolves correctly
+  const shareUrl = `${BASE_URL}/${config.id}`
 
   const addMember = () => {
     const name = inputVal.trim()

@@ -58,8 +58,10 @@ export default function App() {
   const [expenseItems,  setExpenseItems]  = useState(EXPENSE_ITEMS)
 
   // ── UI state ──────────────────────────────────────────────
-  const [loading,  setLoading]  = useState(false)
-  const [dbError,  setDbError]  = useState(null)
+  const [loading,      setLoading]      = useState(false)
+  const [dbError,      setDbError]      = useState(null)
+  const [urlLoading,   setUrlLoading]   = useState(false)   // fetching trip from /join/:id URL
+  const [deepLinkView, setDeepLinkView] = useState(null)    // 'join' when arriving via share link
 
   // ── Load data when a trip is active ───────────────────────
   const loadTripData = useCallback(async (tripId) => {
@@ -85,6 +87,41 @@ export default function App() {
       loadTripData(tripConfig.id)
     }
   }, [tripConfig?.id, loadTripData])
+
+  // ── Deep-link: read /join/:tripId from the URL on first load
+  useEffect(() => {
+    const match = window.location.pathname.match(/^\/join\/([^/]+)$/)
+    if (!match) return
+
+    const tripId = match[1]
+    setUrlLoading(true)
+
+    Promise.all([
+      db.fetchTrip(tripId),
+      db.fetchMembers(tripId),
+    ])
+      .then(([tripRow, memberRows]) => {
+        setTripConfig({
+          id:         tripRow.id,
+          tripName:   tripRow.trip_name,
+          leaderName: tripRow.leader_name,
+          password:   tripRow.join_password,
+          members:    memberRows.map(r => r.name),
+          memberRows,
+          startDate:  null,
+          endDate:    null,
+          joinCode:   tripRow.id.slice(0, 6).toUpperCase(),
+        })
+        setDeepLinkView('join')
+        // Clean the UUID out of the address bar (no reload)
+        window.history.replaceState({}, '', '/')
+      })
+      .catch(err => {
+        console.error('[deep-link]', err)
+        setDbError('Could not load the trip from this link. It may no longer exist.')
+      })
+      .finally(() => setUrlLoading(false))
+  }, []) // runs once on mount only
 
   // ── Create trip (leader) ───────────────────────────────────
   const handleCreateTrip = async (config) => {
@@ -124,6 +161,19 @@ export default function App() {
     setCurrentUser(null)
   }
 
+  // ── Full-screen loader while resolving a /join/:id deep link
+  if (urlLoading) {
+    return (
+      <div className="app-shell" style={{
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: 16,
+      }}>
+        <div style={{ fontSize: 40 }}>🌴</div>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: 14 }}>Loading trip…</p>
+      </div>
+    )
+  }
+
   // ── Show landing when nobody is logged in ─────────────────
   if (!currentUser) {
     return (
@@ -133,6 +183,7 @@ export default function App() {
         onUpdateTrip={handleUpdateTrip}
         activeTripConfig={tripConfig}
         manageConfig={manageConfig}
+        initialView={deepLinkView}
       />
     )
   }
