@@ -332,3 +332,31 @@ input[type="time"].form-input {
   line-height: 1.4;
   margin-top: 4px;
 }
+
+/* ── Checkbox custom style ── */
+.form-field--checkbox {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  user-select: none;
+}
+
+.form-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+  border-radius: 4px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-bg);
+}
+

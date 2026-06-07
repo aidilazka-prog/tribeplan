@@ -18,9 +18,10 @@ const EMPTY_FORM = {
   category: 'activity',
   note: '',
   googleMapsUrl: '',
+  is_voting_slot: false,
 }
 
-export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDays, initialValues = null, existingEvents = [] }) {
+export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDays, initialValues = null, existingEvents = [], isLeader }) {
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -246,6 +247,29 @@ export default function AddEventModal({ isOpen, onClose, onSubmit, selectableDay
           {showClashWarning && (
             <div className="form-clash-warning" role="alert">
               <span>⚠️ Scheduling Conflict: Another activity is already planned for this time!</span>
+            </div>
+          )}
+
+          {/* Voting Slot Checkbox (Leader only) */}
+          {isLeader && (
+            <div className="form-field form-field--checkbox" style={{ marginTop: '8px', marginBottom: '16px' }}>
+              <label className="form-checkbox-label">
+                <input
+                  type="checkbox"
+                  className="form-checkbox"
+                  checked={form.is_voting_slot || false}
+                  onChange={(e) => {
+                    const checked = e.target.checked
+                    setForm(prev => ({
+                      ...prev,
+                      is_voting_slot: checked,
+                      title: checked && !prev.title ? 'Open Vote: Select Activity' : prev.title,
+                      location: checked && !prev.location ? 'TBD' : prev.location,
+                    }))
+                  }}
+                />
+                <span className="checkbox-text">🗳️ Make this an open Voting Slot</span>
+              </label>
             </div>
           )}
 

@@ -24,12 +24,14 @@ function toTimelineItem(row) {
   let location = ''
   let note = ''
   let category = 'activity'
+  let alternativeIdeaIds = []
   try {
     if (row.notes && row.notes.trim().startsWith('{')) {
       const parsed = JSON.parse(row.notes)
       location = parsed.location || ''
       note = parsed.note || ''
       category = parsed.category || 'activity'
+      alternativeIdeaIds = parsed.alternative_idea_ids || []
     } else {
       location = row.notes || ''
       note = ''
@@ -49,6 +51,8 @@ function toTimelineItem(row) {
     category,
     googleMapsUrl: row.google_maps_url ?? '',
     isDone:        row.is_done ?? false,
+    is_voting_slot: row.is_voting_slot ?? false,
+    alternativeIdeaIds,
   }
 }
 
@@ -146,6 +150,9 @@ export default function App() {
   const [announcementInput, setAnnouncementInput] = useState('')
   const [showAnnouncementForm, setShowAnnouncementForm] = useState(false)
 
+  // ── Votes ──────────────────────────────────────────────────
+  const [timelineVotes, setTimelineVotes] = useState([])
+
   // ── Remote data ───────────────────────────────────────────
   const [timelineItems, setTimelineItems] = useState([])
   const [ideaItems,     setIdeaItems]     = useState([])
@@ -168,12 +175,14 @@ export default function App() {
     setLoading(true)
     setDbError(null)
     try {
-      const [events, ideas] = await Promise.all([
+      const [events, ideas, votes] = await Promise.all([
         db.fetchTimelineEvents(tripId),
         db.fetchIdeas(tripId),
+        db.fetchTimelineVotes(tripId),
       ])
       setTimelineItems(events.map(toTimelineItem))
       setIdeaItems(ideas.map(toIdeaItem))
+      setTimelineVotes(votes)
     } catch (err) {
       console.error(err)
       setDbError(err.message)
@@ -410,6 +419,140 @@ export default function App() {
     }
   }, [tripConfig?.id])
 
+  // Load timeline votes and subscribe to real-time updates
+  useEffect(() => {
+    if (!tripConfig?.id) return
+
+    const channel = supabase
+      .channel(`public:timeline_votes:${tripConfig.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'timeline_votes',
+        },
+        (payload) => {
+          const { eventType, new: newRow, old: oldRow } = payload
+          if (eventType === 'INSERT') {
+            setTimelineVotes(prev => {
+              if (prev.some(v => v.id === newRow.id)) return prev
+              return [...prev, newRow]
+            })
+          } else if (eventType === 'UPDATE') {
+            setTimelineVotes(prev => prev.map(v => v.id === newRow.id ? newRow : v))
+          } else if (eventType === 'DELETE') {
+            setTimelineVotes(prev => prev.filter(v => v.id !== oldRow.id))
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [tripConfig?.id])
+
+  const handleAttachAlternative = async (eventId, ideaId) => {
+    const event = timelineItems.find(i => i.id === eventId)
+    if (!event) return
+
+    const updatedIds = [...(event.alternativeIdeaIds || [])]
+    if (updatedIds.includes(ideaId)) return
+    if (updatedIds.length >= 3) {
+      setDbError('You can attach at most 3 alternatives.')
+      return
+    }
+    updatedIds.push(ideaId)
+
+    const notesJson = JSON.stringify({
+      location: event.location || '',
+      note: event.note || '',
+      category: event.category || 'activity',
+      alternative_idea_ids: updatedIds
+    })
+
+    try {
+      await db.updateTimelineEvent(eventId, {
+        day_number: event.day,
+        time_slot: event.time,
+        title: event.title,
+        notes: notesJson,
+        google_maps_url: event.googleMapsUrl || null,
+        is_voting_slot: true
+      })
+      setTimelineItems(prev => prev.map(i => i.id === eventId ? { ...i, alternativeIdeaIds: updatedIds } : i))
+    } catch (err) {
+      console.error(err)
+      setDbError('Failed to attach alternative idea.')
+    }
+  }
+
+  const handleVoteAlternative = async (eventId, ideaId) => {
+    const existingVote = timelineVotes.find(v => v.event_id === eventId && v.idea_id === ideaId && v.member_name === currentUser)
+    
+    if (existingVote) {
+      setTimelineVotes(prev => prev.filter(v => v.id !== existingVote.id))
+    } else {
+      const tempId = `tmp-vote-${Date.now()}`
+      const newVote = { id: tempId, event_id: eventId, idea_id: ideaId, member_name: currentUser }
+      setTimelineVotes(prev => [
+        ...prev.filter(v => !(v.event_id === eventId && v.member_name === currentUser)),
+        newVote
+      ])
+    }
+
+    try {
+      await db.toggleVote(eventId, ideaId, currentUser)
+      const votes = await db.fetchTimelineVotes(tripConfig.id)
+      setTimelineVotes(votes)
+    } catch (err) {
+      console.error(err)
+      setDbError('Failed to record your vote.')
+      const votes = await db.fetchTimelineVotes(tripConfig.id)
+      setTimelineVotes(votes)
+    }
+  }
+
+  const handleLockWinningActivity = async (eventId, ideaId) => {
+    const winningIdea = ideaItems.find(i => i.id === ideaId)
+    if (!winningIdea) return
+
+    const notesJson = JSON.stringify({
+      location: 'To be confirmed',
+      note: 'Democratic choice locked in by group vote.',
+      category: 'activity'
+    })
+
+    try {
+      await db.lockVotingSlot(eventId, ideaId, {
+        title: winningIdea.title,
+        notes: notesJson,
+        googleMapsUrl: ''
+      })
+      
+      setTimelineItems(prev => prev.map(item => {
+        if (item.id === eventId) {
+          return {
+            ...item,
+            title: winningIdea.title,
+            location: 'To be confirmed',
+            note: 'Democratic choice locked in by group vote.',
+            is_voting_slot: false,
+            alternativeIdeaIds: []
+          }
+        }
+        return item
+      }))
+
+      setIdeaItems(prev => prev.filter(i => i.id !== ideaId))
+      setTimelineVotes(prev => prev.filter(v => v.event_id !== eventId))
+    } catch (err) {
+      console.error(err)
+      setDbError('Failed to lock the winning activity.')
+    }
+  }
+
   const handleBroadcast = async (e) => {
     e.preventDefault()
     if (!tripConfig?.id) return
@@ -492,7 +635,7 @@ export default function App() {
     : expenseItems
 
   // ── Timeline handlers ──────────────────────────────────────
-  const handleAddEvent = async ({ day, time, title, location, category, note, googleMapsUrl }) => {
+  const handleAddEvent = async ({ day, time, title, location, category, note, googleMapsUrl, is_voting_slot }) => {
     // Optimistic: add placeholder immediately
     const tempId = `tmp-${Date.now()}`
     const optimistic = {
@@ -500,6 +643,8 @@ export default function App() {
       time, title, location: location || '', note: note || '', category,
       googleMapsUrl: googleMapsUrl || '',
       isDone: false,
+      is_voting_slot: is_voting_slot || false,
+      alternativeIdeaIds: [],
     }
     setTimelineItems(prev =>
       [...prev, optimistic].sort((a, b) =>
@@ -511,10 +656,11 @@ export default function App() {
       const notesJson = JSON.stringify({
         location: location || '',
         note: note || '',
-        category: category || 'activity'
+        category: category || 'activity',
+        alternative_idea_ids: []
       })
       const row = await db.addTimelineEvent(tripConfig.id, {
-        day, time, title, note: notesJson, googleMapsUrl
+        day, time, title, note: notesJson, googleMapsUrl, is_voting_slot
       })
       const real = { ...toTimelineItem(row), date: DAY_DATES[day] ?? DAY_DATES[1] }
       setTimelineItems(prev =>
@@ -583,6 +729,7 @@ export default function App() {
         location: updatedEvent.location || '',
         note: updatedEvent.note || '',
         category: updatedEvent.category || 'activity',
+        alternative_idea_ids: updatedEvent.alternativeIdeaIds || []
       })
       await db.updateTimelineEvent(updatedEvent.id, {
         day_number: Number(updatedEvent.day),
@@ -590,6 +737,7 @@ export default function App() {
         title: updatedEvent.title,
         notes: notesJson,
         google_maps_url: updatedEvent.googleMapsUrl || null,
+        is_voting_slot: updatedEvent.is_voting_slot || false
       })
     } catch (err) {
       console.error(err)
@@ -819,6 +967,13 @@ export default function App() {
             onToggleDone={handleToggleDone}
             selectableDays={selectableDays}
             tripName={tripConfig?.tripName || 'Our Trip'}
+            currentUser={currentUser}
+            isLeader={isLeader}
+            ideaItems={ideaItems}
+            timelineVotes={timelineVotes}
+            onAttachAlternative={handleAttachAlternative}
+            onVoteAlternative={handleVoteAlternative}
+            onLockWinningActivity={handleLockWinningActivity}
           />
         )}
         {activeTab === TABS.IDEAS && (

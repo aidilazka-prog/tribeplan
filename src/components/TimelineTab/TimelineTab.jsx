@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import AddEventModal from '../AddEventModal/AddEventModal'
 import AiPlannerModal from '../AiPlannerModal/AiPlannerModal'
 import './TimelineTab.css'
@@ -21,14 +21,96 @@ const CATEGORY_COLORS = {
   transport:     '#94a3b8',
 }
 
-import { useEffect } from 'react'
-
-export default function TimelineTab({ items, onAddEvent, onAddEventsBulk, onEditEvent, onToggleDone, selectableDays = [], tripName }) {
+export default function TimelineTab({
+  items,
+  onAddEvent,
+  onAddEventsBulk,
+  onEditEvent,
+  onToggleDone,
+  selectableDays = [],
+  tripName,
+  currentUser,
+  isLeader,
+  ideaItems = [],
+  timelineVotes = [],
+  onAttachAlternative,
+  onVoteAlternative,
+  onLockWinningActivity,
+}) {
   const [modalOpen, setModalOpen] = useState(false)
   const [aiModalOpen, setAiModalOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState(null)
   const [now, setNow] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState(1)
+  const [travelTimes, setTravelTimes] = useState({})
+
+  // Transit estimation fallback
+  function estimateTransitTimeFallback(locA, locB) {
+    if (!locA || !locB) return null
+    const str = locA + locB
+    let hash = 0
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    const mins = 10 + Math.abs(hash % 36) // 10 to 45 mins
+    return `${mins} mins`
+  }
+
+  // Calculate driving transits
+  useEffect(() => {
+    const newTravelTimes = { ...travelTimes }
+    let changed = false
+
+    const days = {}
+    items.forEach(item => {
+      if (!days[item.day]) days[item.day] = []
+      days[item.day].push(item)
+    })
+
+    Object.keys(days).forEach(day => {
+      const dayEvents = days[day].sort((a, b) => a.time.localeCompare(b.time))
+      for (let i = 0; i < dayEvents.length - 1; i++) {
+        const current = dayEvents[i]
+        const next = dayEvents[i + 1]
+        const pairKey = `${current.id}-${next.id}`
+
+        if (!travelTimes[pairKey]) {
+          const origin = current.location || current.title
+          const dest = next.location || next.title
+
+          if (origin && dest && origin !== 'TBD' && dest !== 'TBD') {
+            const fallbackTime = estimateTransitTimeFallback(origin, dest)
+            newTravelTimes[pairKey] = fallbackTime
+            changed = true
+
+            if (window.google?.maps?.DistanceMatrixService) {
+              const service = new window.google.maps.DistanceMatrixService()
+              service.getDistanceMatrix(
+                {
+                  origins: [origin],
+                  destinations: [dest],
+                  travelMode: window.google.maps.TravelMode.DRIVING,
+                },
+                (response, status) => {
+                  if (status === 'OK' && response.rows[0]?.elements[0]?.duration) {
+                    const text = response.rows[0].elements[0].duration.text
+                    setTravelTimes(prev => ({
+                      ...prev,
+                      [pairKey]: text
+                    }))
+                  }
+                }
+              )
+            }
+          }
+        }
+      }
+    })
+
+    if (changed) {
+      setTravelTimes(newTravelTimes)
+    }
+  }, [items])
 
   // Keep now updated every minute
   useEffect(() => {
@@ -178,18 +260,41 @@ export default function TimelineTab({ items, onAddEvent, onAddEventsBulk, onEdit
                     <p className="timeline-day__empty-desc">Click "Add Event" or use "✨ AI Planner" below to start scheduling!</p>
                   </div>
                 ) : (
-                  dayEvents.map((item, idx) => (
-                    <TimelineCard
-                      key={item.id}
-                      item={item}
-                      isLast={idx === dayEvents.length - 1}
-                      isNew={item.id.startsWith('tl-') && /^\d{13}$/.test(item.id.slice(3))}
-                      isClosestUpcoming={item.id === closestUpcomingId}
-                      now={now}
-                      onEditClick={handleEditClick}
-                      onToggleDone={onToggleDone}
-                    />
-                  ))
+                  dayEvents.map((item, idx) => {
+                    const nextItem = dayEvents[idx + 1]
+                    const travelTimeText = nextItem ? travelTimes[`${item.id}-${nextItem.id}`] : null
+                    return (
+                      <Fragment key={item.id}>
+                        <TimelineCard
+                          item={item}
+                          isLast={idx === dayEvents.length - 1}
+                          isNew={item.id.startsWith('tl-') && /^\d{13}$/.test(item.id.slice(3))}
+                          isClosestUpcoming={item.id === closestUpcomingId}
+                          now={now}
+                          onEditClick={handleEditClick}
+                          onToggleDone={onToggleDone}
+                          currentUser={currentUser}
+                          isLeader={isLeader}
+                          ideaItems={ideaItems}
+                          timelineVotes={timelineVotes}
+                          onAttachAlternative={onAttachAlternative}
+                          onVoteAlternative={onVoteAlternative}
+                          onLockWinningActivity={onLockWinningActivity}
+                        />
+                        {travelTimeText && (
+                          <div className="timeline-transit-row">
+                            <div className="timeline-transit-connector">
+                              <div className="timeline-transit-line-dotted"></div>
+                            </div>
+                            <div className="timeline-transit-badge">
+                              <span className="timeline-transit-icon">🚘</span>
+                              <span className="timeline-transit-text">~{travelTimeText} drive to next stop</span>
+                            </div>
+                          </div>
+                        )}
+                      </Fragment>
+                    )
+                  })
                 )}
               </div>
             </div>
@@ -232,6 +337,7 @@ export default function TimelineTab({ items, onAddEvent, onAddEventsBulk, onEdit
         selectableDays={selectableDays}
         initialValues={editingEvent}
         existingEvents={items}
+        isLeader={isLeader}
       />
 
       {/* ── AI Planner Modal ── */}
@@ -246,7 +352,22 @@ export default function TimelineTab({ items, onAddEvent, onAddEventsBulk, onEdit
   )
 }
 
-function TimelineCard({ item, isLast, isNew, isClosestUpcoming, now, onEditClick, onToggleDone }) {
+function TimelineCard({
+  item,
+  isLast,
+  isNew,
+  isClosestUpcoming,
+  now,
+  onEditClick,
+  onToggleDone,
+  currentUser,
+  isLeader,
+  ideaItems,
+  timelineVotes,
+  onAttachAlternative,
+  onVoteAlternative,
+  onLockWinningActivity,
+}) {
   const color = CATEGORY_COLORS[item.category] || 'var(--color-text-muted)'
   const icon  = CATEGORY_ICONS[item.category] || '📍'
 
@@ -269,6 +390,7 @@ function TimelineCard({ item, isLast, isNew, isClosestUpcoming, now, onEditClick
   const isMock = item.id && item.id.toString().startsWith('tour-mock-')
   const cardClasses = [
     'timeline-card',
+    item.is_voting_slot ? 'timeline-card--voting' : '',
     isNew ? 'timeline-card--new' : '',
     item.isDone ? 'timeline-card--done' : '',
     item.isPast ? 'timeline-card--past' : '',
@@ -299,6 +421,9 @@ function TimelineCard({ item, isLast, isNew, isClosestUpcoming, now, onEditClick
               >
                 {item.category}
               </span>
+              {item.is_voting_slot && (
+                <span className="timeline-card__voting-badge">🗳️ Voting Slot</span>
+              )}
             </div>
             
             {/* Actions & Countdown */}
@@ -406,9 +531,162 @@ function TimelineCard({ item, isLast, isNew, isClosestUpcoming, now, onEditClick
           {item.note && (
             <p className="timeline-card__note">{item.note}</p>
           )}
+
+          {item.is_voting_slot && (
+            <VotingSlotSection
+              item={item}
+              currentUser={currentUser}
+              isLeader={isLeader}
+              ideaItems={ideaItems}
+              timelineVotes={timelineVotes}
+              onAttachAlternative={onAttachAlternative}
+              onVoteAlternative={onVoteAlternative}
+              onLockWinningActivity={onLockWinningActivity}
+            />
+          )}
         </div>
       </div>
     </article>
+  )
+}
+
+function VotingSlotSection({
+  item,
+  currentUser,
+  isLeader,
+  ideaItems,
+  timelineVotes,
+  onAttachAlternative,
+  onVoteAlternative,
+  onLockWinningActivity,
+}) {
+  const [showSelector, setShowSelector] = useState(false)
+
+  // Get votes for this event
+  const eventVotes = timelineVotes.filter(v => v.event_id === item.id)
+
+  // Group alternative ideas
+  const alternativeIdeas = (item.alternativeIdeaIds || [])
+    .map(id => ideaItems.find(idea => idea.id === id))
+    .filter(Boolean)
+
+  // Compute votes count for each alternative
+  const voteCounts = {}
+  alternativeIdeas.forEach(idea => {
+    voteCounts[idea.id] = eventVotes.filter(v => v.idea_id === idea.id).length
+  })
+
+  // Find highest vote count
+  let highestVoteCount = -1
+  alternativeIdeas.forEach(idea => {
+    const count = voteCounts[idea.id] || 0
+    if (count > highestVoteCount) {
+      highestVoteCount = count
+    }
+  })
+
+  // Determine active choices
+  const isVoted = (ideaId) => {
+    return eventVotes.some(v => v.idea_id === ideaId && v.member_name === currentUser)
+  }
+
+  // Get available ideas to link (not already linked)
+  const availableIdeas = ideaItems.filter(idea => 
+    !(item.alternativeIdeaIds || []).includes(idea.id)
+  )
+
+  return (
+    <div className="timeline-card__voting-section">
+      <span className="voting-section-title">Alternatives</span>
+      
+      {alternativeIdeas.length === 0 ? (
+        <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', margin: '4px 0' }}>
+          No alternatives attached yet.
+        </p>
+      ) : (
+        <ul className="timeline-card__alternatives">
+          {alternativeIdeas.map(idea => {
+            const count = voteCounts[idea.id] || 0
+            const hasVoted = isVoted(idea.id)
+            const isHighest = count > 0 && count === highestVoteCount
+
+            return (
+              <li 
+                key={idea.id} 
+                className={`alternative-item${isHighest ? ' alternative-item--highest-voted' : ''}`}
+              >
+                <span className="alternative-item__title" title={idea.title}>
+                  💡 {idea.title}
+                </span>
+
+                <div className="alternative-actions">
+                  <button
+                    type="button"
+                    className={`alt-vote-btn${hasVoted ? ' alt-vote-btn--active' : ''}`}
+                    onClick={() => onVoteAlternative(item.id, idea.id)}
+                    aria-label={`Vote for ${idea.title}`}
+                  >
+                    👍 <span className="alt-vote-count">{count}</span>
+                  </button>
+
+                  {isLeader && isHighest && (
+                    <button
+                      type="button"
+                      className="btn-lock-winner"
+                      onClick={() => onLockWinningActivity(item.id, idea.id)}
+                      title="Lock this activity as the final plan"
+                    >
+                      🔒 Lock
+                    </button>
+                  )}
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {isLeader && (item.alternativeIdeaIds || []).length < 3 && (
+        <>
+          {!showSelector ? (
+            <button
+              type="button"
+              className="btn-attach-alt"
+              onClick={() => setShowSelector(true)}
+            >
+              + Attach Alternatives from Idea Bucket
+            </button>
+          ) : (
+            <div className="alternative-selector">
+              <select
+                className="form-select select-alternative"
+                onChange={(e) => {
+                  if (e.target.value) {
+                    onAttachAlternative(item.id, e.target.value)
+                    setShowSelector(false)
+                  }
+                }}
+                defaultValue=""
+              >
+                <option value="" disabled>-- Select an Idea --</option>
+                {availableIdeas.map(idea => (
+                  <option key={idea.id} value={idea.id}>
+                    💡 {idea.title}
+                  </option>
+                ))}
+              </select>
+              <button 
+                type="button" 
+                className="btn-cancel-select" 
+                onClick={() => setShowSelector(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
   )
 }
 

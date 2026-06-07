@@ -151,7 +151,7 @@ export async function fetchTimelineEvents(tripId) {
  * Add a new event to the timeline.
  * Returns the inserted row.
  */
-export async function addTimelineEvent(tripId, { day, time, title, note, googleMapsUrl }) {
+export async function addTimelineEvent(tripId, { day, time, title, note, googleMapsUrl, is_voting_slot }) {
   const { data, error } = await supabase
     .from('timeline_events')
     .insert({
@@ -161,6 +161,7 @@ export async function addTimelineEvent(tripId, { day, time, title, note, googleM
       title,
       notes:            note || null,
       google_maps_url:  googleMapsUrl || null,
+      is_voting_slot:   is_voting_slot || false,
     })
     .select()
     .single()
@@ -196,7 +197,7 @@ export async function deleteTimelineEvent(eventId) {
 /**
  * Update a timeline event.
  */
-export async function updateTimelineEvent(eventId, { day_number, time_slot, title, notes, google_maps_url }) {
+export async function updateTimelineEvent(eventId, { day_number, time_slot, title, notes, google_maps_url, is_voting_slot }) {
   const { data, error } = await supabase
     .from('timeline_events')
     .update({
@@ -205,6 +206,7 @@ export async function updateTimelineEvent(eventId, { day_number, time_slot, titl
       title,
       notes,
       google_maps_url,
+      is_voting_slot,
     })
     .eq('id', eventId)
     .select()
@@ -389,4 +391,118 @@ export async function deletePackingItem(itemId) {
     .eq('id', itemId)
 
   if (error) throw new Error(`[db/deletePackingItem] ${error.message}`)
+}
+
+// ─────────────────────────────────────────────────────────────
+// TIMELINE VOTES
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Fetch all timeline votes for a trip.
+ */
+export async function fetchTimelineVotes(tripId) {
+  const { data: events, error: evtsErr } = await supabase
+    .from('timeline_events')
+    .select('id')
+    .eq('trip_id', tripId)
+
+  if (evtsErr) throw new Error(`[db/fetchTimelineVotes/events] ${evtsErr.message}`)
+  const eventIds = events.map(e => e.id)
+
+  if (eventIds.length === 0) return []
+
+  const { data, error } = await supabase
+    .from('timeline_votes')
+    .select('*')
+    .in('event_id', eventIds)
+
+  return assert(data, error, 'fetchTimelineVotes')
+}
+
+/**
+ * Toggle a member's vote for an idea in a timeline voting slot.
+ * Ensures the member only has at most one vote for this timeline event.
+ */
+export async function toggleVote(eventId, ideaId, memberName) {
+  const { data: existing, error: err } = await supabase
+    .from('timeline_votes')
+    .select('*')
+    .eq('event_id', eventId)
+    .eq('idea_id', ideaId)
+    .eq('member_name', memberName)
+
+  if (err) throw new Error(`[db/toggleVote/check] ${err.message}`)
+
+  if (existing && existing.length > 0) {
+    // Delete this vote
+    const { error: delErr } = await supabase
+      .from('timeline_votes')
+      .delete()
+      .eq('id', existing[0].id)
+    if (delErr) throw new Error(`[db/toggleVote/delete] ${delErr.message}`)
+    return { type: 'delete', id: existing[0].id }
+  } else {
+    // Delete any other votes by this member for this event
+    const { error: delOthersErr } = await supabase
+      .from('timeline_votes')
+      .delete()
+      .eq('event_id', eventId)
+      .eq('member_name', memberName)
+    if (delOthersErr) throw new Error(`[db/toggleVote/deleteOthers] ${delOthersErr.message}`)
+
+    // Insert the new vote
+    const { data: inserted, error: insErr } = await supabase
+      .from('timeline_votes')
+      .insert({
+        event_id: eventId,
+        idea_id: ideaId,
+        member_name: memberName
+      })
+      .select()
+      .single()
+
+    if (insErr) throw new Error(`[db/toggleVote/insert] ${insErr.message}`)
+    return { type: 'insert', data: inserted }
+  }
+}
+
+/**
+ * Lock the winning activity of a voting slot:
+ *   1. Updates the timeline event with the title, location/details of the winning idea, and sets is_voting_slot to false.
+ *   2. Deletes the winning idea from the idea_bucket.
+ *   3. Deletes all votes for this event from timeline_votes.
+ */
+export async function lockVotingSlot(eventId, ideaId, { title, notes, googleMapsUrl }) {
+  // 1. Update the event
+  const { data: updatedEvent, error: evtErr } = await supabase
+    .from('timeline_events')
+    .update({
+      title,
+      notes,
+      google_maps_url: googleMapsUrl || null,
+      is_voting_slot: false,
+    })
+    .eq('id', eventId)
+    .select()
+    .single()
+
+  if (evtErr) throw new Error(`[db/lockVotingSlot/updateEvent] ${evtErr.message}`)
+
+  // 2. Delete the idea from the bucket
+  const { error: ideaErr } = await supabase
+    .from('idea_bucket')
+    .delete()
+    .eq('id', ideaId)
+
+  if (ideaErr) throw new Error(`[db/lockVotingSlot/deleteIdea] ${ideaErr.message}`)
+
+  // 3. Delete the votes from timeline_votes
+  const { error: votesErr } = await supabase
+    .from('timeline_votes')
+    .delete()
+    .eq('event_id', eventId)
+
+  if (votesErr) throw new Error(`[db/lockVotingSlot/deleteVotes] ${votesErr.message}`)
+
+  return updatedEvent
 }
